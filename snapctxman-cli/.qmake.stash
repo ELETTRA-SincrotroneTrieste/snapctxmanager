@@ -1,0 +1,23 @@
+QMAKE_CXX.QT_COMPILER_STDCXX = 201402L
+QMAKE_CXX.QMAKE_GCC_MAJOR_VERSION = 8
+QMAKE_CXX.QMAKE_GCC_MINOR_VERSION = 3
+QMAKE_CXX.QMAKE_GCC_PATCH_VERSION = 1
+QMAKE_CXX.COMPILER_MACROS = \
+    QT_COMPILER_STDCXX \
+    QMAKE_GCC_MAJOR_VERSION \
+    QMAKE_GCC_MINOR_VERSION \
+    QMAKE_GCC_PATCH_VERSION
+QMAKE_CXX.INCDIRS = \
+    /usr/include/c++ \
+    /usr/include/c++/x86_64-generic-linux \
+    /usr/include/c++/backward \
+    /usr/lib64/gcc/x86_64-generic-linux/8.3.1/include \
+    /usr/local/include \
+    /usr/lib64/gcc/x86_64-generic-linux/8.3.1/include-fixed \
+    /usr/include
+QMAKE_CXX.LIBDIRS = \
+    /usr/lib64/gcc/x86_64-generic-linux/8.3.1 \
+    /usr/lib64 \
+    /lib64 \
+    /lib \
+    /usr/lib

@@ -1,0 +1,6 @@
+dbtype = snapdbmysql
+dbname = snap
+dbuser = snapmanager
+dbpass = snapmanager
+dbhost = hokuto
+

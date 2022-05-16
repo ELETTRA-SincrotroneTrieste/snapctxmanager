@@ -1,0 +1,8 @@
+src/ctxfileloader.cpp
+src/ctxfileloader.h
+src/snapctxman-listener.h
+src/snapctxmanager.cpp
+src/snapctxmanager.h
+src/snapctxmanager_p.h
+src/snapdbschema.cpp
+src/snapdbschema.h
