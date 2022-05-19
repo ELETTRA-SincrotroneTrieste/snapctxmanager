@@ -1,2 +1,5 @@
 src
 /usr/local/hdbextractor/include
+/usr/local/tango-9.4.0/include/tango/
+/usr/local/omniorb-4.3.0/include/
+/usr/local/zeromq-4.3.4/include/

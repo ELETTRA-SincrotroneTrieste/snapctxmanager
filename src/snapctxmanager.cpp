@@ -2,6 +2,7 @@
 #include "snapctxmanager_p.h"
 #include "snapctxman-listener.h"
 #include "snapdbschema.h"
+#include "tgutils.h"
 #include "ctxfileloader.h"
 #include <mysqlconnection.h>
 #include <result.h>
@@ -44,10 +45,10 @@ SnapCtxManager::SnapCtxManager(SnapDbSchemaListener *sl)
  */
 bool SnapCtxManager::connect(DbType dbType,
                              const char *host,
-                           const char *db,
-                           const char *user,
-                           const char *passwd,
-                           unsigned short port)
+                             const char *db,
+                             const char *user,
+                             const char *passwd,
+                             unsigned short port)
 {
     bool success = false;
     d->msg.clear();
@@ -68,6 +69,9 @@ bool SnapCtxManager::connect(DbType dbType,
 
     if(!success)
         perr("%s", d->msg.c_str());
+    else
+        d->dbschema = new SnapDbSchema();
+
     return success;
 }
 
@@ -95,10 +99,10 @@ bool SnapCtxManager::connect()
         dbt = SNAPDBMYSQL;
         printf("calling connect with %s %s %s %s\n", qc->get("dbhost").c_str(),
                qc->get("dbname").c_str(), qc->get("dbuser").c_str(),
-                qc->get("dbpass").c_str());
+               qc->get("dbpass").c_str());
         return connect(dbt, qc->get("dbhost").c_str(),
-                   qc->get("dbname").c_str(), qc->get("dbuser").c_str(),
-                    qc->get("dbpass").c_str(), port);
+                       qc->get("dbname").c_str(), qc->get("dbuser").c_str(),
+                       qc->get("dbpass").c_str(), port);
     }
     else
         d->msg = "invalid database type " + dbty;
@@ -122,19 +126,65 @@ bool  SnapCtxManager::hasError() const {
 int SnapCtxManager::register_context(const Context& c,
                                      const std::vector<std::string> &srcs) {
     int nrows = 0;
-    if(!d->dbschema)  {
-        d->dbschema = new SnapDbSchema();
+    if(!d->dbschema)
+        return nrows;
+    TgUtils pfetcher;
+    std::vector<Ast> vast = pfetcher.get(srcs);
+    if(pfetcher.err.length() > 0) {
+        d->msg = pfetcher.err;
     }
-    int id = d->dbschema->register_context(d->connection, c.name, c.author, c.reason, c.description);
-    if(id > 0) {
-        // id stores the new context id
-        for(const std::string& s : srcs) {
-
+    else {
+        int id = d->dbschema->register_context(d->connection, c.name, c.author, c.reason, c.description);
+        if(id > 0) {
+            nrows++; // one row added to the context table
+            TgUtils pfetcher;
+            // id stores the new context id
+            nrows = d->dbschema->link_attributes(d->connection, id, vast);
         }
+        else
+            d->msg = "error registering context \"" + c.name + "\": " + d->dbschema->message();
     }
-    else
-        d->msg = "error registering context \"" + c.name + "\": " + std::string(d->connection->getError());
     return nrows;
+}
+
+int SnapCtxManager::remove_from_ctx(const std::string &ctxnam, const std::vector<std::string> &srcs) {
+    d->msg.clear();
+    int r = -1;
+    if(!d->dbschema)
+        return r;
+    r = d->dbschema->srcs_remove(d->connection, ctxnam, srcs);
+    if(r <= 0)
+        d->msg = "error removing " + std::to_string(srcs.size()) + " from context '" + ctxnam + "': " + d->dbschema->message();
+    return r;
+}
+
+int SnapCtxManager::remove_ctx(const std::string &ctxnam) {
+    if(!d->dbschema)
+        return -1;
+    int r = d->dbschema->ctx_remove(d->connection, ctxnam);
+    if(r <= 0)
+        d->msg = "error removing context '" + ctxnam + "': " + d->dbschema->message();
+    return r;
+}
+
+bool SnapCtxManager::get_context(const std::string& id_or_nam, Context &ctx, std::vector<Ast>& v) {
+    d->msg.clear();
+    bool ok = (d->dbschema != nullptr);
+    if(d->dbschema) {
+        ok = d->dbschema->get_context(d->connection, id_or_nam, ctx, v);
+        d->msg = d->dbschema->message();
+    }
+    return ok;
+}
+
+int SnapCtxManager::search(const std::string &search, std::vector<Context> &ctxs) {
+    d->msg.clear();
+    int cnt = 0;
+    if(d->dbschema) {
+         cnt = d->dbschema->search(d->connection, search, ctxs);
+         d->msg = d->dbschema->message();
+    }
+    return cnt;
 }
 
 bool SnapCtxManager::query(const char *query, Result *&result, double *elapsed) {

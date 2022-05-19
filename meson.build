@@ -20,14 +20,16 @@ configure_file(output : 'config.h',
 headers = [ 'src/snapctxmanager.h',
     'src/snapctxmanager_p.h',
     'src/snapdbschema.h',
-    'src/ctxfileloader.h'
+    'src/ctxfileloader.h',
+    'src/tgutils.h'
 ]
 
 install_headers(headers, subdir : 'snapctxmanager') # -> include/snapctxmanager/
 
 sources = [ 'src/snapctxmanager.cpp',
 'src/snapdbschema.cpp',
-'src/ctxfileloader.cpp'
+'src/ctxfileloader.cpp',
+'src/tgutils.cpp'
 ]
 
 includedirs = include_directories('src')
@@ -35,7 +37,7 @@ includedirs = include_directories('src')
 # for perr, pinfo, etc
 cpp_arguments = [ '-DHDBEXTRACTORLIB_PRINTINFO=1' ]
 
-deps = [ dependency('hdbextractor++') ]
+deps = [ dependency('hdbextractor++'), dependency('tango') ]
 
 snapctxmanagerlib = shared_library('snapctxmanager', sources,
         version : meson.project_version(),

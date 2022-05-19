@@ -1,0 +1,2 @@
+option('conf_file', type : 'string', value : 'snapctxman-cli.conf', description : 'configuration file name (internal usage)')
+option('conf_dir', type : 'string', value : '$HOME/.config/snapctxman-cli', description : 'directory containing the conf_file')
