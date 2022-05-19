@@ -6,3 +6,5 @@ src/snapctxmanager.h
 src/snapctxmanager_p.h
 src/snapdbschema.cpp
 src/snapdbschema.h
+src/tgutils.cpp
+src/tgutils.h

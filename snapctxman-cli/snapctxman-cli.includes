@@ -1,2 +1,4 @@
 /usr/local/snapctxmanager/include/snapctxmanager
 /usr/local/hdbextractor/include
+src
+.
