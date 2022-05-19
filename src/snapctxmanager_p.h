@@ -8,7 +8,7 @@
 class Connection;
 class SnapDbSchema;
 class SnapCtxManListener;
-class HdbXSettings;
+class DbSettings;
 class SnapDbSchemaListener;
 
 class SnapCtxMan_P
@@ -20,7 +20,7 @@ public:
     Connection * connection;
     SnapCtxManListener* snactxman_listener;
 
-    HdbXSettings *hdbxSettings;
+    DbSettings *hdbxSettings;
     SnapDbSchema *dbschema;
     SnapDbSchemaListener *dbsl;
 

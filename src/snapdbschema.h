@@ -67,14 +67,19 @@ public:
     int link_attributes(Connection *connection, int context_id,
                         const std::vector<Ast> &srcs);
 
-    int ctx_remove(Connection *conn, const std::string &ctxnam);
+    int ctx_id(Connection *conn, const std::string &find);
+    int ctx_remove(Connection *conn, const std::string &id_or_nam);
     int srcs_remove(Connection *conn, const std::string& ctxnam, const std::vector<std::string> & srcs);
 
     bool get_context(Connection *conn, const std::string& id_or_nam, Context &ctx, std::vector<Ast>& v);
 
-    std::string message() const;
+
+    std::string error() const;
+    std::string warning() const;
 
     int search(Connection *conn, const std::string &search, std::vector<Context> &ctxs);
+    std::vector<Context> ctxlist(Connection *conn);
+
 private:
     SnapDbSchemaP *d;
 };

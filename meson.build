@@ -35,9 +35,9 @@ sources = [ 'src/snapctxmanager.cpp',
 includedirs = include_directories('src')
 
 # for perr, pinfo, etc
-cpp_arguments = [ '-DHDBEXTRACTORLIB_PRINTINFO=1' ]
+cpp_arguments = [ '-DELETTRA_EU_LIBSQLDB_PRINTINFO=1' ]
 
-deps = [ dependency('hdbextractor++'), dependency('tango') ]
+deps = [ dependency('libsqldb'), dependency('tango') ]
 
 snapctxmanagerlib = shared_library('snapctxmanager', sources,
         version : meson.project_version(),
@@ -61,7 +61,7 @@ pkgg.generate(
     version : meson.project_version(),
     name : 'libsnapctxmanager',
     filebase : 'snapctxmanager',
-    requires: ['hdbextractor++'],
+    requires: ['libsqldb'],
     description : project_description )
 
 

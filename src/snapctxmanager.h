@@ -11,7 +11,7 @@
 
 class SnapCtxMan_P;
 class SnapCtxManListener;
-class HdbXSettings;
+class DbSettings;
 class TimeInterval;
 class Result;
 
@@ -52,20 +52,19 @@ public:
     virtual void onFinished(double elapsed);
 
     std::string error() const;
+    std::string warning() const;
     bool hasError() const;
 
     int register_context(const Context &c, const std::vector<std::string> & srcs);
-
     int remove_from_ctx(const std::string& ctxnam, const std::vector<std::string> & srcs);
-
+    int add_to_ctx(const std::string& ctxnam, const std::vector<std::string> & srcs);
     int remove_ctx(const std::string& ctxnam);
-
     bool get_context(const std::string &id_or_nam, Context &ctx, std::vector<Ast>& v);
-
     int search(const std::string& search, std::vector<Context> &ctxs);
+    std::vector<Context> ctxlist();
 
 private:
     SnapCtxMan_P *d;
 };
 
-#endif // HDBEXTRACTOR_H
+#endif // SNAPCTXMANAGER_H

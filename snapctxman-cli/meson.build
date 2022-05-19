@@ -4,7 +4,7 @@ project('snapctx-man', 'cpp',
 
 cpp_argus = [ '-DHDBEXTRACTORLIB_PRINTINFO=1', '-DCONF_FILE="' + get_option('conf_file') + '"', '-DCONF_DIR="' + get_option('conf_dir') + '"' ]
 
-deps = [ dependency('snapctxmanager'), dependency('hdbextractor++')  ]
+deps = [ dependency('snapctxmanager')  ]
 
 headers = [ 'src/utils.h' ]
 

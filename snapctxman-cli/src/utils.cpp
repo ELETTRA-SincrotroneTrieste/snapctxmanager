@@ -13,8 +13,8 @@
 #include <fstream>
 
 void Utils::usage(const char *appnam) {
-    printf("\e[1;31mUsage\e[0m \"%s -n ctxname -a author -r \"a reason\" -c dbconf -f ctxfile [-d \"a description\"] \n"
-           "At least one of \e[1;37;4mreason\e[0m or \e[1;37;4mdescription\e[0m must be specified\n\n", appnam);
+    printf("\033[1;31mUsage\033[0m \"%s -n ctxname -a author -r \"a reason\" -c dbconf -f ctxfile [-d \"a description\"] \n"
+           "At least one of \033[1;37;4mreason\033[0m or \033[1;37;4mdescription\033[0m must be specified\n\n", appnam);
 }
 
 std::string Utils::conf_dir() const {
@@ -46,7 +46,8 @@ bool Utils::configure()
         confd.replace(0, strlen("$HOME"), pw->pw_dir);
     }
 
-    struct stat st = {0};
+    struct stat st;
+    memset(&st, 0, sizeof(st));
     if (stat(confd.c_str(), &st) == -1) {
         r = mkdir(confd.c_str(), 0700);
     }
@@ -93,7 +94,7 @@ bool Utils::configure()
 void Utils::out_ctxs(const std::vector<Context> &v) const {
     int i = 0;
     for(const Context& c : v)
-        printf("%d. Name: \e[1;32;4m%s\e[0m\n   Author: %s\n   Reason: %s\n   Description: %s\n   ID: %d\n", ++i, c.name.c_str(), c.author.c_str(), c.reason.c_str(), c.description.c_str(), c.id);
+        printf("%d. Name: \033[1;32;4m%s\033[0m\n   Author: %s\n   Reason: %s\n   Description: %s\n   ID: %d\n", ++i, c.name.c_str(), c.author.c_str(), c.reason.c_str(), c.description.c_str(), c.id);
 }
 
 void Utils::out_ctx(const Context& c, const std::vector<Ast> &v) const {
@@ -102,7 +103,7 @@ void Utils::out_ctx(const Context& c, const std::vector<Ast> &v) const {
     const int maxsrclen = 35;
     out_ctxs(std::vector<Context> { c } );
     TgUtils u;
-    size_t srcM = 0, dtM = 0, facM = strlen("facility");
+    size_t srcM = 0, dtM = 0, facM = strlen(" facility");
     for(const Ast& a : v) {
         if(a.full_name.length() > srcM)
             srcM = a.full_name.length();
@@ -121,7 +122,7 @@ void Utils::out_ctx(const Context& c, const std::vector<Ast> &v) const {
     for(size_t s = 0; s < srcM - strlen("source"); s++)
         printf(" ");
     printf("| type");
-    for(size_t s = 0; s < strlen(" type"); s++)
+    for(size_t s = 0; s < dtM - strlen("type"); s++)
         printf(" ");
     printf("| fmt | wri| max dim x| max dim y");
     if(has_facility)
@@ -136,7 +137,7 @@ void Utils::out_ctx(const Context& c, const std::vector<Ast> &v) const {
         std::string src (a.full_name);
 
         // list number / src name
-        printf("\e[1;32m%s\e[0m", src.c_str());
+        printf("\033[1;32m%s\033[0m", src.c_str());
         for(size_t s = 0; s < srcM - src.length(); s++)
             printf(" ");
         // data type
@@ -145,8 +146,8 @@ void Utils::out_ctx(const Context& c, const std::vector<Ast> &v) const {
             printf(" ");
 
         //        dt     color +df
-        printf("| %s%s\e[0m ",
-               df == "SCA" ? "\e[0;32m" : ( df == "SPE" ? "\e[0;36m" : "\e[0;35m"), df.c_str()); // data format with color
+        printf("| %s%s\033[0m ",
+               df == "SCA" ? "\033[0;32m" : ( df == "SPE" ? "\033[0;36m" : "\033[0;35m"), df.c_str()); // data format with color
         printf("| %s", u.writable(a.writable).c_str());
         for(size_t s = 0; s < strlen("RWW") - u.writable(a.writable).length(); s++)
             printf(" ");
@@ -155,18 +156,20 @@ void Utils::out_ctx(const Context& c, const std::vector<Ast> &v) const {
         for(size_t s = 0; s < strlen("max dim x") - X.length(); s++)
             printf(" ");
         printf("| %s", Y.c_str());
-        for(size_t s = 0; s < strlen("max dim y") - X.length(); s++)
+        for(size_t s = 0; s < strlen("max dim y") - Y.length(); s++)
             printf(" ");
 
         // facility
-        size_t flen = a.facility != "HOST:port" ? a.facility.length() : 0;
-        printf("| ");
-        if(a.facility != "HOST:port")
-            printf("\e[0;33m%s\e[0m", a.facility.c_str());
-        for(size_t s = 0; s < facM - flen; s++)
-            printf(" ");
+        if(has_facility) { // at least one
+            size_t flen = a.facility != "HOST:port" ? a.facility.length() : 0;
+            printf("| ");
+            if(a.facility != "HOST:port")
+                printf("\033[0;33m%s\033[0m", a.facility.c_str());
+            for(size_t s = 0; s < facM - flen; s++)
+                printf(" ");
+        }
 
-        printf("| \e[0;34m%d\e[0m", a.id);
+        printf("| \033[0;34m%d\033[0m", a.id);
 
         printf("\n");
     }

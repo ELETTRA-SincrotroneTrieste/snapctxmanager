@@ -7,8 +7,8 @@
 #include <mysqlconnection.h>
 #include <result.h>
 #include <timeinterval.h>
-#include <hdbxmacros.h>
-#include <hdbxsettings.h>
+#include <dbmacros.h>
+#include <dbsettings.h>
 #include <string.h>
 
 
@@ -86,7 +86,7 @@ bool SnapCtxManager::connect()
 {
     int port = 3306;
     bool ok;
-    const HdbXSettings *qc = d->hdbxSettings;
+    const DbSettings *qc = d->hdbxSettings;
     DbType dbt;
     std::string dbty;
     if(qc->hasKey("dbtype"))  // db type explicitly set
@@ -119,6 +119,10 @@ std::string  SnapCtxManager::error() const {
     return d->msg;
 }
 
+std::string SnapCtxManager::warning() const {
+    return d->dbschema != nullptr ? d->dbschema->warning() : "";
+}
+
 bool  SnapCtxManager::hasError() const {
     return d->msg.length() > 0;
 }
@@ -128,21 +132,19 @@ int SnapCtxManager::register_context(const Context& c,
     int nrows = 0;
     if(!d->dbschema)
         return nrows;
-    TgUtils pfetcher;
-    std::vector<Ast> vast = pfetcher.get(srcs);
-    if(pfetcher.err.length() > 0) {
-        d->msg = pfetcher.err;
+    TgUtils tanu;
+    std::vector<Ast> vast = tanu.get(srcs);
+    if(tanu.err.length() > 0) {
+        d->msg = tanu.err;
     }
     else {
         int id = d->dbschema->register_context(d->connection, c.name, c.author, c.reason, c.description);
         if(id > 0) {
             nrows++; // one row added to the context table
-            TgUtils pfetcher;
             // id stores the new context id
-            nrows = d->dbschema->link_attributes(d->connection, id, vast);
+            nrows += d->dbschema->link_attributes(d->connection, id, vast);
         }
-        else
-            d->msg = "error registering context \"" + c.name + "\": " + d->dbschema->message();
+        d->msg = d->dbschema->error();
     }
     return nrows;
 }
@@ -153,8 +155,27 @@ int SnapCtxManager::remove_from_ctx(const std::string &ctxnam, const std::vector
     if(!d->dbschema)
         return r;
     r = d->dbschema->srcs_remove(d->connection, ctxnam, srcs);
-    if(r <= 0)
-        d->msg = "error removing " + std::to_string(srcs.size()) + " from context '" + ctxnam + "': " + d->dbschema->message();
+    d->msg = d->dbschema->error();
+    return r;
+}
+
+int SnapCtxManager::add_to_ctx(const std::string &ctxnam, const std::vector<std::string> &srcs) {
+    int r = 0;
+    if(!d->dbschema)
+        return -1;
+    TgUtils tanu;
+    // get attribute properties for each src from Tango DB
+    std::vector<Ast> vast = tanu.get(srcs);
+    if(tanu.err.length() > 0) {
+        d->msg = tanu.err;
+    }
+    else {
+        int ctx = d->dbschema->ctx_id(d->connection, ctxnam);
+        if(ctx > 0) { // context id for ctxnam > 0
+            r += d->dbschema->link_attributes(d->connection, ctx, vast);
+            d->msg = d->dbschema->error();
+        }
+    }
     return r;
 }
 
@@ -163,7 +184,7 @@ int SnapCtxManager::remove_ctx(const std::string &ctxnam) {
         return -1;
     int r = d->dbschema->ctx_remove(d->connection, ctxnam);
     if(r <= 0)
-        d->msg = "error removing context '" + ctxnam + "': " + d->dbschema->message();
+        d->msg = d->dbschema->error();
     return r;
 }
 
@@ -172,7 +193,7 @@ bool SnapCtxManager::get_context(const std::string& id_or_nam, Context &ctx, std
     bool ok = (d->dbschema != nullptr);
     if(d->dbschema) {
         ok = d->dbschema->get_context(d->connection, id_or_nam, ctx, v);
-        d->msg = d->dbschema->message();
+        d->msg = d->dbschema->error();
     }
     return ok;
 }
@@ -181,10 +202,21 @@ int SnapCtxManager::search(const std::string &search, std::vector<Context> &ctxs
     d->msg.clear();
     int cnt = 0;
     if(d->dbschema) {
-         cnt = d->dbschema->search(d->connection, search, ctxs);
-         d->msg = d->dbschema->message();
+        cnt = d->dbschema->search(d->connection, search, ctxs);
+        d->msg = d->dbschema->error();
     }
     return cnt;
+}
+
+std::vector<Context> SnapCtxManager::ctxlist() {
+    std::vector<Context> ctxs;
+    d->msg.clear();
+    int cnt = 0;
+    if(d->dbschema) {
+        ctxs = d->dbschema->ctxlist(d->connection);
+        d->msg = d->dbschema->error();
+    }
+    return ctxs;
 }
 
 bool SnapCtxManager::query(const char *query, Result *&result, double *elapsed) {
