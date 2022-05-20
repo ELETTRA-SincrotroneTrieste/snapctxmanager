@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <termios.h>
 
 void Utils::usage(const char *appnam) {
     printf("\033[1;31mUsage\033[0m \"%s -n ctxname -a author -r \"a reason\" -c dbconf -f ctxfile [-d \"a description\"] \n"
@@ -36,7 +37,7 @@ bool Utils::conf_file_exists() const {
     return access(fp.c_str(), F_OK) == 0;
 }
 
-bool Utils::configure()
+int Utils::configure()
 {
     int r = 0;
     std::string confd(CONF_DIR);
@@ -52,43 +53,54 @@ bool Utils::configure()
         r = mkdir(confd.c_str(), 0700);
     }
     if(r == 0) {
+        bool ok = false;
         char in[1024];
-        std::string f = confd + "/" + conf_f;
-        std::ofstream of;
-        of.open(f.c_str());
-        if(of) {
-            std::string str;
-            printf("database host: ");
-            of << "dbhost = ";
-            getline(std::cin, str);
-            of << str << std::endl;
 
-
+        std::map<std::string, std::string> par;
+        std::string str;
+        printf("database host: ");
+        getline(std::cin, str);
+        ok = str.length() > 0;
+        if(ok){
+            par["dbhost"] = str;
             printf("database user: ");
-            of << "dbuser = ";
             getline(std::cin, str);
-            of << str << std::endl;
-
-
-            printf("database password: ");
-            of << "dbpass = ";
-            getline(std::cin, str);
-            of << str << std::endl;
-
-
-            printf("database name: ");
-            of << "dbname = ";
-            getline(std::cin, str);
-            if(str.length() > 0)
-                of << str << std::endl;
-            else
-                of << "snap" << std::endl;
-
-            of.close();
-            return true;
+            ok = str.length() > 0;
         }
+        if(ok) {
+            par["dbuser"] = str;
+            printf("database password (echo disabled): ");
+            struct termios tty;
+            tcgetattr(STDIN_FILENO, &tty);
+            tty.c_lflag &= ~ECHO;
+            tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+            getline(std::cin, str);
+            tty.c_lflag |= ECHO;
+            tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+            if(str.length() == 0)
+                printf("warning: empty password\n");
+            par["dbpass"] = str;
+            printf("\ndatabase name (default if blank: \"snap\"): ");
+            getline(std::cin, str);
+            str.length() > 0 ? par["dbname"] = str : par["dbname"] = "snap";
+        }
+        if(ok) {
+            std::string f = confd + "/" + conf_f;
+            std::ofstream of;
+            of.open(f.c_str());
+            if(of) {
+                for(std::map<std::string, std::string>::const_iterator it = par.begin(); it != par.end() ; ++it)
+                    of << it->first << " = " << it->second << std::endl;
+                of.close();
+                return 0;
+            }
+            else
+                return 1;  // 1: error writing file
+        }
+        else
+            return -1; // configuration not complete
     }
-    return false;
+    return 1; // 1: error creating dir
 }
 
 void Utils::out_ctxs(const std::vector<Context> &v) const {

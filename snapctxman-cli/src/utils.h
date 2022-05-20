@@ -13,7 +13,7 @@ public:
     std::string conf_dir() const;
     std::string conf_file_path() const;
     bool conf_file_exists() const;
-    bool configure();
+    int configure();
 };
 
 #endif // PRINT_H

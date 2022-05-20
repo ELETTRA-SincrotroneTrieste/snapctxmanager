@@ -39,6 +39,23 @@ Ast::Ast(const std::string &src,
       archivable(archiva),
       levelg(levg) {
 
+        m_split_src(src);
+
+    //    printf("%s: %s\t\t%s\t\t%s\t\t%s\t\t\t{%s}\e[0m\n",
+    //           __PRETTY_FUNCTION__, domain.c_str(), family.c_str(), member.c_str(), att_name.c_str(), facility.c_str());
+}
+
+Ast::Ast(const std::string &src) :
+    max_dim_x(0),
+    max_dim_y(0),
+    data_type(0),
+    data_format(0),
+    writable(0) {
+
+    m_split_src(src);
+}
+
+void Ast::m_split_src(const std::string& src) {
     int last = src.find_last_of('/');
     att_name = src.substr(last + 1);
     bool has_facility = (std::count(src.begin(), src.end(), '/') == 4);
@@ -54,8 +71,6 @@ Ast::Ast(const std::string &src,
     if(has_facility) {
         full_name = src.substr(src.find("/") + 1);
     }
-    //    printf("%s: %s\t\t%s\t\t%s\t\t%s\t\t\t{%s}\e[0m\n",
-    //           __PRETTY_FUNCTION__, domain.c_str(), family.c_str(), member.c_str(), att_name.c_str(), facility.c_str());
 }
 
 
@@ -121,14 +136,12 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
             row = res->getCurrentRow();
             // reuse existing att ID for the given full_name and facility
             att_ids.push_back(atoi(row->getField(0)));
-            printf("\e[1;32m i \e[0m attribute '%s' facility '%s' already in ast with ID %s\e[0m\n", a.full_name.c_str(), a.facility.c_str(), row->getField(0));
             delete res;
         }
         else if(!res) {
             d->err = connection->getError();
         }
         else if(res->getRowCount() == 0) { // need insert new row
-            printf("SnapDbSchema::link_attributes insert into ast\n");
             snprintf(q, 2048, "INSERT INTO ast (time,full_name,device,domain,family,member,att_name,data_type,"
                               "data_format,writable,max_dim_x,max_dim_y,levelg,facility,archivable,substitute)"
                               "VALUES (NOW(),'%s', '%s', '%s', '%s', '%s', '%s', %d, "
@@ -351,6 +364,28 @@ int SnapDbSchema::srcs_remove(Connection *conn, const std::string &id_or_nam, co
         }
     }
     return ar;
+}
+
+int SnapDbSchema::rename(Connection *conn, const std::string& ctxn, const std::vector<std::string> &olda, const std::vector<Ast> &v) {
+    int r = 0;
+    d->err.clear();
+    if(olda.size() == v.size()) {
+    int c = ctx_id(conn, ctxn);
+    if(c > 0) {
+        char q[2048];
+        memset(q, 0, sizeof(char) * 2048);
+        // use Ast to split olda src into full_name and facility
+        std::vector<Ast> old;
+        for(const std::string& o : olda)
+            old.push_back(Ast(o));
+
+    }
+    else
+        d->err = "context not found";
+    }
+    else
+        d->err = "old and new attribute name lists differ in size";
+    return r;
 }
 
 bool SnapDbSchema::get_context(Connection *conn, const std::string &id_or_nam, Context &ctx, std::vector<Ast> &v) {

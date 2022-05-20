@@ -38,12 +38,12 @@ int main(int argc, char **argv)
     DbSettings *qc = nullptr;
     int ch;
     std::string dbc, snapc; // db conf snap conf file names
-    std::string name, author, reason, description, search;
+    std::string name, author, reason, description, search, renatts;
     bool remove = false, configure = false, add = false;
     bool op = false;
     bool ctxlist = false; // list contexts
     Utils uti;
-    while ((ch = getopt(argc, argv, "n:a:r:d:c:f:s:ADilh")) != -1) {
+    while ((ch = getopt(argc, argv, "n:a:r:d:c:f:s:R:ADilh")) != -1) {
         switch (ch) {
         case 'c':
             dbc = std::string(optarg);
@@ -78,6 +78,9 @@ int main(int argc, char **argv)
         case 'A':
             add = true;
             break;
+        case 'R':
+            renatts = std::string(optarg);
+            break;
         case '?':
         case 'h':
         default:
@@ -90,11 +93,15 @@ int main(int argc, char **argv)
         perr("-c conf_file not specified and %s does not exist", uti.conf_dir().c_str());
         printf("\033[1;32;4mhint\033[0m: call %s -i to configure the application\n", argv[0]);
     }
-    else if(configure && uti.configure()) {
-        printf("configuration written under \033[1;37;2m%s\033[0m\n", uti.conf_file_path().c_str());
-    }
-    else if(configure)  { // error
-        perr("error writing configuration into \033[1;37;2m%s\033[0m\n", uti.conf_file_path().c_str());
+    else if(configure) {
+        op = true;
+        int r = uti.configure();
+        if(r == 0)
+            printf("configuration written under \033[1;37;2m%s\033[0m\n", uti.conf_file_path().c_str());
+        else if(r < 0)
+            perr("configuration unchanged due to invalid parameters");
+        else
+            perr("error writing configuration into \033[1;37;2m%s\033[0m\n", uti.conf_file_path().c_str());
     }
     else {
         dbc = uti.conf_file_path();
@@ -125,6 +132,7 @@ int main(int argc, char **argv)
                                          qc->get("dbuser").c_str(),
                                          qc->get("dbpass").c_str());
                 if(!conn) {
+                    op = true;
                     perr("%s: error connecting to database %s on %s user %s: %s",
                          argv[0], qc->get("dbname").c_str(), qc->get("dbhost").c_str(),
                             qc->get("dbuser").c_str(), scm->error().c_str());
@@ -136,8 +144,12 @@ int main(int argc, char **argv)
                         int r = scm->register_context(ctx, srcs);
                         if(r <= 0)
                             perr("failed to register context '%s': %s", name.c_str(), scm->error().c_str());
-                        printf("%d database rows affected registering context \033[1;32m'%s' with %ld sources \033[0;36m[took %ldms]\033[0m\n",
-                               r, name.c_str(), srcs.size(), duration());
+                        printf("%d database rows affected registering context \033[1;32m'%s' with %ld sources\n",
+                               r, name.c_str(), srcs.size());
+                        if(r > 0)
+                            printf("\033[1;32;4mhint\033[0m: call %s -n \"%s\" to see context details \033[0;36m[took %ldms]\033[0m\n",
+                                   argv[0], name.c_str(), duration());
+
                     }
                     else if(!add && remove && srcs.size() > 0 && name.length()) {
                         op = true;
@@ -210,6 +222,15 @@ int main(int argc, char **argv)
                         }
                         if(scm->warning().length() > 0)
                             printf("\033[1;33;2mWARNING\033[0m: %s\n", scm->warning().c_str());
+                    }
+                    else if(renatts.length() > 0 && srcs.size() > 0 && name.length() > 0) {
+                        std::vector<std::string> ra = split(renatts, ',');
+                        scm->rename(name, srcs, ra);
+                        if(srcs.size() == ra.size()) {
+
+                        }
+                        else
+                            perr("list of old and new attributes differ in size");
                     }
                 }
             }
