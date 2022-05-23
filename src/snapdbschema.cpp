@@ -39,20 +39,24 @@ Ast::Ast(const std::string &src,
       archivable(archiva),
       levelg(levg) {
 
-        m_split_src(src);
+    m_split_src(src);
 
     //    printf("%s: %s\t\t%s\t\t%s\t\t%s\t\t\t{%s}\e[0m\n",
     //           __PRETTY_FUNCTION__, domain.c_str(), family.c_str(), member.c_str(), att_name.c_str(), facility.c_str());
 }
 
 Ast::Ast(const std::string &src) :
+    full_name(src),
     max_dim_x(0),
     max_dim_y(0),
     data_type(0),
     data_format(0),
     writable(0) {
 
+    printf("Ast string constructor from %s\n", src.c_str());
     m_split_src(src);
+
+    printf("full name %s facility %s \n", full_name.c_str(), facility.c_str());
 }
 
 void Ast::m_split_src(const std::string& src) {
@@ -366,22 +370,52 @@ int SnapDbSchema::srcs_remove(Connection *conn, const std::string &id_or_nam, co
     return ar;
 }
 
-int SnapDbSchema::rename(Connection *conn, const std::string& ctxn, const std::vector<std::string> &olda, const std::vector<Ast> &v) {
+int SnapDbSchema::rename(Connection *conn, const std::vector<std::string> &olda,  const std::vector<Ast> &v) {
     int r = 0;
     d->err.clear();
     if(olda.size() == v.size()) {
-    int c = ctx_id(conn, ctxn);
-    if(c > 0) {
         char q[2048];
-        memset(q, 0, sizeof(char) * 2048);
-        // use Ast to split olda src into full_name and facility
-        std::vector<Ast> old;
-        for(const std::string& o : olda)
-            old.push_back(Ast(o));
+        // find if new attributes already in ast
+        for(size_t i = 0;  d->err.length() == 0 && i < v.size(); i++) {
+            const Ast old_a(olda[i]);
+            const Ast& a = v[i];
+            memset(q, 0, sizeof(char) * 2048);
+            snprintf(q, 2048, "SELECT ID FROM ast WHERE full_name='%s' AND facility='%s'", old_a.full_name.c_str(),  old_a.facility.c_str());
+            printf("%s: 1) \e[1;36m%s\e[0m\n", __PRETTY_FUNCTION__, q);
 
-    }
-    else
-        d->err = "context not found";
+            Result *res = conn->query(q);
+            if(res && res->getRowCount() == 1 && res->next()) {
+                Row *row = res->getCurrentRow();
+                int id = atoi(row->getField(0));
+                memset(q, 0, sizeof(char) * 2048);
+                snprintf(q, 2048, "UPDATE ast SET full_name='%s', device='%s', domain='%s', "
+                                  " family='%s', member='%s', att_name='%s',"
+                                  "data_type=%d, data_format=%d, writable=%d, max_dim_x=%d, max_dim_y=%d, levelg=%d, facility='%s',"
+                                  "archivable=%d, substitute=%d WHERE ID=%d",
+                         a.full_name.c_str(), a.device.c_str(), a.domain.c_str(),
+                         a.family.c_str(), a.member.c_str(), a.att_name.c_str(),
+                         a.data_type, a.data_format, a.writable, a.max_dim_x, a.max_dim_y, a.levelg, a.facility.c_str(),
+                         a.archivable, a.substitute, id);
+                Result *updres = conn->query(q);
+                printf("%s: 2) \e[1;36m%s affected rows %d updres %p \e[0m\n", __PRETTY_FUNCTION__, q, conn->getAffectedRows(), updres);
+                if(updres && conn->getAffectedRows() == 1) {
+                   r++;
+                }
+                else
+                    d->err = std::string(conn->getError());
+                if(updres)
+                    delete updres;
+                printf("\e[1;36mSnapDbSchema::rename found ID %d for %s facility %s error %s\e[0m\n", a.id, a.full_name.c_str(), a.facility.c_str(), conn->getError());
+
+            }
+            else if(res && res->getRowCount() == 0) {
+                d->err = a.full_name + " " + (a.facility != "HOST:port" ? ( "(" + a.facility + ")" ) : "") + "not found";
+            }
+            if(res)
+                delete res;
+            else
+                d->err = conn->getError();
+        }
     }
     else
         d->err = "old and new attribute name lists differ in size";
@@ -415,7 +449,6 @@ bool SnapDbSchema::get_context(Connection *conn, const std::string &id_or_nam, C
         snprintf(q, 2048, "SELECT ID,full_name,data_type,data_format,writable, max_dim_x, max_dim_y, facility "
                           "FROM list,ast WHERE ast.ID=list.id_att AND list.id_context=%d "
                           "ORDER BY full_name ASC", ctx.id);
-
         res = conn->query(q);
         v.reserve(res->getRowCount());
         while(res && res->next() > 0) {

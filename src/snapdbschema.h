@@ -25,7 +25,7 @@ public:
         int archivable = 0,
         int levelg = 0);
 
-    Ast(const std::string& src);
+    explicit Ast(const std::string& src);
 
     Ast() : id(-1), max_dim_x(0), max_dim_y(0) {}
 
@@ -75,7 +75,7 @@ public:
     int ctx_id(Connection *conn, const std::string &find);
     int ctx_remove(Connection *conn, const std::string &id_or_nam);
     int srcs_remove(Connection *conn, const std::string& ctxnam, const std::vector<std::string> & srcs);
-    int rename(Connection *conn, const std::string &ctxn, const std::vector<std::string>& olda, const std::vector<Ast> &v);
+    int rename(Connection *conn, const std::vector<std::string>& olda, const std::vector<Ast> &v);
     bool get_context(Connection *conn, const std::string& id_or_nam, Context &ctx, std::vector<Ast>& v);
     int search(Connection *conn, const std::string &search, std::vector<Context> &ctxs);
     std::vector<Context> ctxlist(Connection *conn);

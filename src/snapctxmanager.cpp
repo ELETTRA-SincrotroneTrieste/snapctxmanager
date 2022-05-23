@@ -209,7 +209,6 @@ int SnapCtxManager::search(const std::string &search, std::vector<Context> &ctxs
 int SnapCtxManager::rename(const std::string &ctxnam, const std::vector<std::string> &olda, const std::vector<std::string> &newa) {
     int r = 0;
     d->msg.clear();
-    bool ok = (d->dbschema != nullptr);
     if(d->dbschema) {
         TgUtils tanu;
         std::vector<Ast> vast = tanu.get(newa);
@@ -218,7 +217,8 @@ int SnapCtxManager::rename(const std::string &ctxnam, const std::vector<std::str
         }
         else  {
             // configuration ok with new attributes
-            r = d->dbschema->rename(d->connection, ctxnam, olda, vast);
+            r = d->dbschema->rename(d->connection, olda, vast);
+            d->msg = d->dbschema->error();
         }
     }
     return r;

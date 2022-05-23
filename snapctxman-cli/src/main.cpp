@@ -223,14 +223,29 @@ int main(int argc, char **argv)
                         if(scm->warning().length() > 0)
                             printf("\033[1;33;2mWARNING\033[0m: %s\n", scm->warning().c_str());
                     }
-                    else if(renatts.length() > 0 && srcs.size() > 0 && name.length() > 0) {
+                    else if(renatts.length() > 0 && srcs.size() > 0) {
+                        op = true;
+                        int r = 0;
                         std::vector<std::string> ra = split(renatts, ',');
-                        scm->rename(name, srcs, ra);
-                        if(srcs.size() == ra.size()) {
-
+                        for(size_t i = 0; i < ra.size() && i < srcs.size() && ra.size() == srcs.size(); i++)
+                            printf("\e[0;35m%s\033[0m --> \033[1;32m%s\033[0m\n", srcs[i].c_str(), ra[i].c_str());
+                        printf("\e[1;33mWARNING\e[0m: operation affects all contexts pointing to the given attributes to rename\n");
+                        printf("         are you sure? [type 'yes' + <return>]: ");
+                        std::string proceed;
+                        std::cin >> proceed;
+                        if(proceed == "yes") {
+                            if(srcs.size() == ra.size()) {
+                                r = scm->rename(name, srcs, ra);
+                                if(r == 0)
+                                    printf("\033[1;33m*\033[0m no attributes renamed\n");
+                                if(scm->error().length() > 0)
+                                    perr("%s", scm->error().c_str());
+                            }
+                            else
+                                perr("list of old and new attributes differ in size");
                         }
                         else
-                            perr("list of old and new attributes differ in size");
+                            printf("\033[1;33m*\e[0m rename operation cancelled\n");
                     }
                 }
             }
