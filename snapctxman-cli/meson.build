@@ -16,4 +16,4 @@ executable('snapctx-man',
            cpp_args : cpp_argus,
            install : true)
 
-install_data('usage.txt', install_dir : get_option('datadir') + '/' + meson.project_name() )
+install_data('usage.txt', install_dir : get_option('datadir') )

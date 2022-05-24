@@ -18,8 +18,8 @@
 
 void Utils::usage(const char *appnam) {
     std::ifstream usagef;
-    std::string line;
-    usagef.open(DATADIR + std::string("/usage.txt"));
+    std::string line, path = DATADIR + std::string("/usage.txt");
+    usagef.open(path);
     if(usagef.is_open()) {
         while (std::getline (usagef,line) )
             {
@@ -27,6 +27,8 @@ void Utils::usage(const char *appnam) {
             }
         usagef.close();
     }
+    else
+        printf("faile to load %s in read mode\n", path.c_str());
 }
 
 std::string Utils::conf_dir() const {

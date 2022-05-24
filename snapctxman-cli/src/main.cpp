@@ -104,6 +104,7 @@ int main(int argc, char **argv)
         case 'h':
         default:
             uti.usage(argv[0]);
+            op = true;
             break;
         }
     }
@@ -228,7 +229,7 @@ int main(int argc, char **argv)
                             printf("\033[1;32m%ld\033[0m context info fetched in %ldms\n", ctxs.size(), duration());
                         }
                     }
-                    else if(add && srcs.size() > 0 && name.length() > 0) {
+                    else if(!remove && add && srcs.size() > 0 && name.length() > 0) {
                         op = true;
                         int r = scm->add_to_ctx(name, srcs);
                         if(scm->error().length() > 0)
