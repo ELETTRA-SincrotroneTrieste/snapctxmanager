@@ -26,7 +26,8 @@ std::vector<Ast> TgUtils::get(const std::vector<std::string> &srcs) {
 }
 
 string TgUtils::data_type(int dt) const {
-    return std::string(Tango::data_type_to_string(dt));
+//    return std::string(Tango::data_type_to_string(dt));
+    return std::to_string(dt);
 }
 
 string TgUtils::data_format(int f) const {
