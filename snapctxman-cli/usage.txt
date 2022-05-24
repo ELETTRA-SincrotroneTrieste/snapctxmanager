@@ -1,0 +1,151 @@
+
+
++----------------------------------------------------------------------+
+|            Load, display, modify snap db contexts                    |
++----------------------------------------------------------------------+
+
+First time, run the application with the -i switch to configure database access.
+This avoids specifying the database configuration file from the command line (-c) every time.
+
+General notes
+------------------------------------------------------------------------
+
+I.
+After any operation that modifies the database, check the results with
+the option described in 1.
+
+II.
+snapctxman operates on the three context configuration tables `context',
+`ast' and `list'. Data tables are not managed whatsoever. This implies
+that the delete function (-D, section 7) shall remove attributes from the 
+given context but will leave stray data in the respective tables.
+
+1. Show a context by name
+------------------------------------------------------------------------
+
+> snapctxman -n "context name"
+
+-n option requires an exact match for the context name
+
+
+2. Search contexts by name
+------------------------------------------------------------------------
+
+> snapctxman -s "keyword"
+
+> snapctxman -s "%"  ("%" wildcard: shows all contexts)
+
+
+3. Add a new context to the snapshot database
+------------------------------------------------------------------------
+
+3a. Prepare a plain text file with the list of attributes,
+    one per line. Be it "ctx.csv"
+
+3b. Execute
+
+> snapctxman -f ctx.csv  -n "a name" -a "an author" 
+    -r "a reason"  -d "a description"
+
+NOTE 1: either reason or description must be specified. If one
+        is empty, it will have the same value as the other.
+NOTE 2: instead of a file name, a list of comma separated 
+        attributes can be specified with `-f'.
+        Even in the case of just one attribute, the argument
+        shall be terminated by a comma:
+        
+        > snapctxman -f sys/tg_test/1/double_scalar,  -n "name" [...]
+  
+
+4. First time database access configuration or modification
+------------------------------------------------------------------------
+
+> snapctxman -i
+
+Follow the instructions.
+
+5. Custom configuration file
+------------------------------------------------------------------------
+
+A custom configuration file for database access can be used:
+
+-c db.conf: database configuration file
+
+
+6. Add a list of attributes to an existing context
+------------------------------------------------------------------------
+
+> snapctxman -A -f list.csv -n "context name"
+
+-f can have a list of comma separated attributes instead of a file
+with the list of attributes one per line, as described in 3b. NOTE 2.
+
+
+7. Delete one or more attributes from an existing context
+------------------------------------------------------------------------
+
+> snapctxman -D -f list.csv -n "context name"
+
+Delete a list of attributes from the given context, with the observations
+in 3b. NOTE 2 and in "General notes, II"
+
+
+8. Rename attributes, context independently
+------------------------------------------------------------------------
+
+WARNING.
+
+This function shall be used with care: attributes are renamed in the `ast'
+table only. This implies that the operation affects every context that 
+references the renamed attributes. In other words, renamed attributes' IDs
+will be unchanged. Another side effect is that data saved in the snapshots
+for the old name will be now linked to the new one.
+
+If ctxA and ctxB contain a/b/c/d1 and we rename a/b/c/d1 into a/b/c/d2:
+
+> snapctxman -R a/b/c/d1,  -f a/b/c/d2,
+
+then ctxA and ctxB will be affected. Old data referring to a/b/c/d1 will
+now belong to a/b/c/d2!
+
+If you are really sure that this behavior matches your intentions, please 
+note that:
+8.1 -f accepts either a list of comma separated attributes (as in 3b. NOTE 2)
+	or a file with one attribute per line;
+8.2 -R accepts only a comma separated list of attributes;
+8.3 the number of sources given with -f must be the same as the one given
+    with -R _and_ the rename procedure shall follow the order of the given
+    sources:
+    
+    > snapctxman -R t1,t2,t3  -f s1,s2,s3
+    
+    shall rename old source s1 into t1, s2 into t2 and s3 into t3.
+    
+    
+9. Documentation
+------------------------------------------------------------------------
+
+> snapctxman -h 
+
+or simply
+
+> snapctxman 
+
+shows this documentation page.
+
+The same effect shall be expected when a combination of command line 
+parameters is invalid.
+
+
+10. Contacts
+------------------------------------------------------------------------
+
+giacomo.strangolino@elettra.eu
+
+
+11. Source code and project page
+------------------------------------------------------------------------
+
+https://github.com/ELETTRA-SincrotroneTrieste/snapctxmanager
+
+
