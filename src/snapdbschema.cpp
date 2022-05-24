@@ -370,6 +370,31 @@ int SnapDbSchema::srcs_remove(Connection *conn, const std::string &id_or_nam, co
     return ar;
 }
 
+std::map<std::string, std::vector<Context>> SnapDbSchema::get_contexts_with_atts(Connection *conn, const std::vector<std::string> &atts) {
+    std::map<std::string, std::vector<Context>> map;
+    d->err.clear();
+    char q[2048];
+    for(size_t i = 0; d->err.length() == 0 && i < atts.size(); i++) {
+        const std::string& a = atts[i];
+        memset(q, 0, sizeof(char) * 2048);
+        snprintf(q, 2048, "SELECT name,author,reason,description FROM ast,context,list WHERE ast.ID=list.id_att AND context.id_context=list.id_context AND ast.full_name='%s'",
+                 a.c_str());
+        Result *res = conn->query(q);
+        for(int i = 0; res != nullptr && i < res->getRowCount(); i++) {
+            res->next();
+            Row* row = res->getCurrentRow();
+            Context c(row->getField(0), row->getField(1), row->getField(2), row->getField(3));
+            map[a].push_back(c);
+            delete row;
+        }
+        if(res)
+            delete res;
+        if(strlen(conn->getError()) > 0)
+            d->err = conn->getError();
+    }
+    return map;
+}
+
 int SnapDbSchema::rename(Connection *conn, const std::vector<std::string> &olda,  const std::vector<Ast> &v) {
     int r = 0;
     d->err.clear();
@@ -381,8 +406,6 @@ int SnapDbSchema::rename(Connection *conn, const std::vector<std::string> &olda,
             const Ast& a = v[i];
             memset(q, 0, sizeof(char) * 2048);
             snprintf(q, 2048, "SELECT ID FROM ast WHERE full_name='%s' AND facility='%s'", old_a.full_name.c_str(),  old_a.facility.c_str());
-            printf("%s: 1) \e[1;36m%s\e[0m\n", __PRETTY_FUNCTION__, q);
-
             Result *res = conn->query(q);
             if(res && res->getRowCount() == 1 && res->next()) {
                 Row *row = res->getCurrentRow();
@@ -397,16 +420,13 @@ int SnapDbSchema::rename(Connection *conn, const std::vector<std::string> &olda,
                          a.data_type, a.data_format, a.writable, a.max_dim_x, a.max_dim_y, a.levelg, a.facility.c_str(),
                          a.archivable, a.substitute, id);
                 Result *updres = conn->query(q);
-                printf("%s: 2) \e[1;36m%s affected rows %d updres %p \e[0m\n", __PRETTY_FUNCTION__, q, conn->getAffectedRows(), updres);
                 if(updres && conn->getAffectedRows() == 1) {
-                   r++;
+                    r++;
                 }
                 else
                     d->err = std::string(conn->getError());
                 if(updres)
                     delete updres;
-                printf("\e[1;36mSnapDbSchema::rename found ID %d for %s facility %s error %s\e[0m\n", a.id, a.full_name.c_str(), a.facility.c_str(), conn->getError());
-
             }
             else if(res && res->getRowCount() == 0) {
                 d->err = a.full_name + " " + (a.facility != "HOST:port" ? ( "(" + a.facility + ")" ) : "") + "not found";

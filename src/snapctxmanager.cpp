@@ -206,6 +206,16 @@ int SnapCtxManager::search(const std::string &search, std::vector<Context> &ctxs
     return cnt;
 }
 
+std::map<std::string, std::vector<Context> > SnapCtxManager::get_contexts_with_atts(const std::vector<std::string> &atts) {
+    std::map<std::string, std::vector<Context>> ctxm;
+    d->msg.clear();
+    if(d->dbschema) {
+        ctxm = d->dbschema->get_contexts_with_atts(d->connection, atts);
+        d->msg = d->dbschema->error();
+    }
+    return ctxm;
+}
+
 int SnapCtxManager::rename(const std::string &ctxnam, const std::vector<std::string> &olda, const std::vector<std::string> &newa) {
     int r = 0;
     d->msg.clear();

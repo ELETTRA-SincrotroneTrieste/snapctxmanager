@@ -61,6 +61,7 @@ public:
     int remove_ctx(const std::string& ctxnam);
     bool get_context(const std::string &id_or_nam, Context &ctx, std::vector<Ast>& v);
     int search(const std::string& search, std::vector<Context> &ctxs);
+    std::map<std::string, std::vector<Context>> get_contexts_with_atts(const std::vector<std::string> &atts);
     int rename(const std::string& ctxnam, const std::vector<std::string>& olda, const std::vector<std::string> &newa);
     std::vector<Context> ctxlist();
 

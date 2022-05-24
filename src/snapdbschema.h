@@ -2,6 +2,7 @@
 #define SNAPDBSCHEMA_H
 
 #include <string>
+#include <map>
 #include <vector>
 
 class Connection;
@@ -75,6 +76,7 @@ public:
     int ctx_id(Connection *conn, const std::string &find);
     int ctx_remove(Connection *conn, const std::string &id_or_nam);
     int srcs_remove(Connection *conn, const std::string& ctxnam, const std::vector<std::string> & srcs);
+    std::map<std::string, std::vector<Context> > get_contexts_with_atts(Connection *conn, const std::vector<std::string> &atts);
     int rename(Connection *conn, const std::vector<std::string>& olda, const std::vector<Ast> &v);
     bool get_context(Connection *conn, const std::string& id_or_nam, Context &ctx, std::vector<Ast>& v);
     int search(Connection *conn, const std::string &search, std::vector<Context> &ctxs);

@@ -12,10 +12,21 @@
 #include <iostream>
 #include <fstream>
 #include <termios.h>
+#include <iostream>
+#include <fstream>
+
 
 void Utils::usage(const char *appnam) {
-    printf("\033[1;31mUsage\033[0m \"%s -n ctxname -a author -r \"a reason\" -c dbconf -f ctxfile [-d \"a description\"] \n"
-           "At least one of \033[1;37;4mreason\033[0m or \033[1;37;4mdescription\033[0m must be specified\n\n", appnam);
+    std::ifstream usagef;
+    std::string line;
+    usagef.open(DATADIR + std::string("/usage.txt"));
+    if(usagef.is_open()) {
+        while (std::getline (usagef,line) )
+            {
+              std::cout << line << '\n';
+            }
+        usagef.close();
+    }
 }
 
 std::string Utils::conf_dir() const {

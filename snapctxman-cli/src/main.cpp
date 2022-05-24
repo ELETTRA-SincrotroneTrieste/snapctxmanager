@@ -33,6 +33,25 @@ std::vector<std::string> split(const std::string& s, char sep) {
     return v;
 }
 
+bool prompt_rename(const std::map<std::string, std::vector<Context>>& cm, const std::vector<std::string>& olds, const std::vector<std::string> &news) {
+    printf("\nattributes renamed in the \033[1;32;4mast\033[0m table:\n\n");
+    for(size_t i = 0; i < news.size() && i < olds.size() && news.size() == olds.size(); i++)
+        printf(" - \033[0;35m%s\033[0m --> \033[1;32m%s\033[0m\n", olds[i].c_str(), news[i].c_str());
+    printf("\n\033[1;33mWARNING\033[0m: operation \033[1;31maffects all contexts\033[0m sharing the attributes to rename\n");
+
+    for(std::map<std::string, std::vector<Context>>::const_iterator it = cm.begin(); it != cm.end(); ++it) {
+        printf("\033[1;33mWARNING\033[0m: attribute \033[1;33;2m%s\033[0m is in context(s): \n", it->first.c_str());
+        for(size_t i = 0; i < it->second.size(); i++)
+            printf("'\033[1;31m%s\033[0m'%s", it->second[i].name.c_str(), i < it->second.size() - 1 ? ", " : "\n");
+    }
+
+    printf("         are you sure you want to proceed? [type 'yes' + <return>]: ");
+    std::string proceed;
+    std::cin >> proceed;
+    printf("\n");
+    return proceed == "yes";
+}
+
 int main(int argc, char **argv)
 {
     DbSettings *qc = nullptr;
@@ -63,9 +82,6 @@ int main(int argc, char **argv)
         case 'd':
             description = std::string(optarg);
             break;
-        case 'D':
-            remove = true;
-            break;
         case 's':
             search = std::string(optarg);
             break;
@@ -77,6 +93,9 @@ int main(int argc, char **argv)
             break;
         case 'A':
             add = true;
+            break;
+        case 'D':
+            remove = true;
             break;
         case 'R':
             renatts = std::string(optarg);
@@ -211,11 +230,11 @@ int main(int argc, char **argv)
                     }
                     else if(add && srcs.size() > 0 && name.length() > 0) {
                         op = true;
-                        size_t r = scm->add_to_ctx(name, srcs);
+                        int r = scm->add_to_ctx(name, srcs);
                         if(scm->error().length() > 0)
                             perr("%s", scm->error().c_str());
                         else if(r >= 0) {
-                            printf("%ld sources added to context \033[1;32;3m%s\033[0m over %ld requested\n",
+                            printf("%d sources added to context \033[1;32;3m%s\033[0m over %ld requested\n",
                                    r, name.c_str(), srcs.size());
                             printf("\033[1;32;4mhint\033[0m: call %s -n \"%s\" to see context details \033[0;36m[took %ldms]\033[0m\n",
                                    argv[0], name.c_str(), duration());
@@ -227,25 +246,21 @@ int main(int argc, char **argv)
                         op = true;
                         int r = 0;
                         std::vector<std::string> ra = split(renatts, ',');
-                        for(size_t i = 0; i < ra.size() && i < srcs.size() && ra.size() == srcs.size(); i++)
-                            printf("\e[0;35m%s\033[0m --> \033[1;32m%s\033[0m\n", srcs[i].c_str(), ra[i].c_str());
-                        printf("\e[1;33mWARNING\e[0m: operation affects all contexts pointing to the given attributes to rename\n");
-                        printf("         are you sure? [type 'yes' + <return>]: ");
-                        std::string proceed;
-                        std::cin >> proceed;
-                        if(proceed == "yes") {
-                            if(srcs.size() == ra.size()) {
+                        if(srcs.size() == ra.size()) {
+                            std::map<std::string, std::vector<Context>> ctxmap = scm->get_contexts_with_atts(srcs);
+                            bool proceed = prompt_rename(ctxmap, srcs, ra);
+                            if(proceed) {
                                 r = scm->rename(name, srcs, ra);
-                                if(r == 0)
-                                    printf("\033[1;33m*\033[0m no attributes renamed\n");
                                 if(scm->error().length() > 0)
                                     perr("%s", scm->error().c_str());
                             }
                             else
-                                perr("list of old and new attributes differ in size");
+                                printf("\033[1;33m*\033[0m rename operation cancelled\n");
                         }
                         else
-                            printf("\033[1;33m*\e[0m rename operation cancelled\n");
+                            perr("list of old and new attributes differ in size");
+                        if(r == 0)
+                            printf("\033[1;33m*\033[0m no attributes renamed\n");
                     }
                 }
             }
