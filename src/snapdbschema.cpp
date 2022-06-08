@@ -189,7 +189,7 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
             Result *res = connection->query(q);
             const char* err= connection->getError();
             if(res && strlen(err) == 0) {
-                if(res->getRowCount() >= 0) {
+                if(res->getRowCount() > 0) {
                     dupids.push_back(aid);
                     dups +=  dups.length() > 0 ? "," + srcs[i].full_name : srcs[i].full_name;
                 }

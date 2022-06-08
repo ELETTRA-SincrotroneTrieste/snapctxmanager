@@ -265,6 +265,9 @@ int main(int argc, char **argv)
                     }
                 }
             }
+
+            if(scm->warning().length() > 0)
+                printf("\033[1;33;4mmWARNING\033[0m: %s\033[0m\n", scm->warning().c_str());
         }
     }
 
