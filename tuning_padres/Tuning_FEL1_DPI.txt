@@ -1,0 +1,15 @@
+# context: Tuning FEL1 DPI
+# author: PADReS
+# description: CCD UH-FEL1, CCD SH-FEL1, CCD POS.02, CCD DPI Halfway, CCD DPI KB Entrance
+# reason: yes we can!
+# date: 2022-06-06
+srv-tango-padres-01:20000/pfe_f01/diagnostics/ccd_pfe_f01.01/OffsetHor
+srv-tango-padres-01:20000/pfe_f01/diagnostics/ccd_pfe_f01.01/OffsetVer
+srv-tango-padres-01:20000/pos_f01/diagnostics/ccd_pos_f01.01/OffsetHor
+srv-tango-padres-01:20000/pos_f01/diagnostics/ccd_pos_f01.01/OffsetVer
+srv-tango-padres-01:20000/pos/diagnostics/ccd_pos.02/OffsetHor
+srv-tango-padres-01:20000/pos/diagnostics/ccd_pos.02/OffsetVer
+srv-tango-padres-01:20000/pos_dpi/diagnostics/ccd_pos_dpi.01/OffsetHor
+srv-tango-padres-01:20000/pos_dpi/diagnostics/ccd_pos_dpi.01/OffsetVer
+srv-tango-padres-01:20000/pos_dpi/diagnostics/ccd_pos_dpi.02/OffsetHor
+srv-tango-padres-01:20000/pos_dpi/diagnostics/ccd_pos_dpi.02/OffsetVer

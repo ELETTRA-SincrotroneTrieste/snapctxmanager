@@ -1,0 +1,15 @@
+# context: Tuning MAG
+# author: PADReS
+# description: CCD UH-FEL2, CCD SH-FEL2, CCD MAG TARDI Entrance, CCD MAG KBH Entrance, CCD MAG KBV Entrance
+# reason: yes we can!
+# date: 2022-06-06
+srv-tango-padres-01:20000/pfe_f02/diagnostics/ccd_pfe_f02.01/OffsetHor
+srv-tango-padres-01:20000/pfe_f02/diagnostics/ccd_pfe_f02.01/OffsetVer
+srv-tango-padres-01:20000/pos_f02/diagnostics/ccd_pos_f02.01/OffsetHor
+srv-tango-padres-01:20000/pos_f02/diagnostics/ccd_pos_f02.01/OffsetVer
+srv-tango-padres-01:20000/pos_mag/diagnostics/ccd_pos_mag.01/OffsetHor
+srv-tango-padres-01:20000/pos_mag/diagnostics/ccd_pos_mag.01/OffsetVer
+srv-tango-padres-01:20000/pos_mag/diagnostics/ccd_pos_mag.02/OffsetHor
+srv-tango-padres-01:20000/pos_mag/diagnostics/ccd_pos_mag.02/OffsetVer
+srv-tango-padres-01:20000/pos_mag/diagnostics/ccd_pos_mag.03/OffsetHor
+srv-tango-padres-01:20000/pos_mag/diagnostics/ccd_pos_mag.03/OffsetVer

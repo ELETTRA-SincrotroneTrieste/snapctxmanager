@@ -1,0 +1,7 @@
+# context: Tuning TMX
+# author: PADReS
+# description: CCD TMX Halfway
+# reason: yes we can!
+# date: 2022-06-06
+srv-tango-padres-01:20000/pos_tmx/diagnostics/ccd_pos_tmx.01/OffsetHor
+srv-tango-padres-01:20000/pos_tmx/diagnostics/ccd_pos_tmx.01/OffsetVer

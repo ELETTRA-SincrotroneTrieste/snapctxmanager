@@ -1,0 +1,7 @@
+# context: Tuning LDM
+# author: PADReS
+# description: CCD LDM KB Entrance
+# reason: yes we can!
+# date: 2022-06-06
+srv-tango-padres-01:20000/pos_ldm/diagnostics/ccd_pos_ldm.01/OffsetHor
+srv-tango-padres-01:20000/pos_ldm/diagnostics/ccd_pos_ldm.01/OffsetVer
