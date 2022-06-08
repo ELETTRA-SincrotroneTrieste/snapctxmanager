@@ -164,7 +164,7 @@ int main(int argc, char **argv)
                         int r = scm->register_context(ctx, srcs);
                         if(r <= 0)
                             perr("failed to register context '%s': %s", name.c_str(), scm->error().c_str());
-                        printf("%d database rows affected registering context \033[1;32m'%s' with %ld sources\n",
+                        printf("%d database rows affected registering context \033[1;32m'%s' with %ld sources\033[0m\n",
                                r, name.c_str(), srcs.size());
                         if(r > 0)
                             printf("\033[1;32;4mhint\033[0m: call %s -n \"%s\" to see context details \033[0;36m[took %ldms]\033[0m\n",

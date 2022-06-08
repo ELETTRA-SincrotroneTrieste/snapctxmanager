@@ -1,6 +1,7 @@
 #include "tgutils.h"
 #include <tango.h>
 
+// caller shall check for err.length()
 std::vector<Ast> TgUtils::get(const std::vector<std::string> &srcs) {
     err.clear();
     std::vector<Ast> r;
@@ -8,8 +9,6 @@ std::vector<Ast> TgUtils::get(const std::vector<std::string> &srcs) {
         int last = s.find_last_of('/');
         std::string dev = s.substr(0, last);
         std::string a = s.substr(last + 1);
-
-
         try {
             Tango::DeviceProxy *de = new Tango::DeviceProxy(dev);
             Tango::AttributeInfoEx x = de->get_attribute_config(a);
@@ -19,9 +18,11 @@ std::vector<Ast> TgUtils::get(const std::vector<std::string> &srcs) {
             if(err.length() > 0)
                 err += "\n";
             err += strerror(e);
+            r.clear();
+            break;
         }
     }
-    //    err = "test error";
+    // test: err = "test error";
     return r;
 }
 
