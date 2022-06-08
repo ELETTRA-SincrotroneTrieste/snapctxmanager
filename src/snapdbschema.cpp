@@ -135,7 +135,6 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
         // find if attribute already in ast
         snprintf(q, 2048, "SELECT ID FROM ast WHERE full_name='%s' AND facility='%s'", a.full_name.c_str(), a.facility.c_str());
         res = connection->query(q);
-        printf("executing query %s res row count %d\n", q, res->getRowCount());
         if(res && res->getRowCount() > 0) {
             res->next();
             row = res->getCurrentRow();
@@ -179,7 +178,6 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
     // 2a. check for potential duplicates
     std::vector <int> dupids; // will be effectively inserted into list
     std::string dups;
-    printf("2a. error \"%s\": att ids size %ld srcs size %ld\n", d->err.c_str(), att_ids.size(), srcs.size());
     if(d->err.length() == 0 && att_ids.size() == srcs.size()) {
         for(size_t i = 0; i < att_ids.size() && d->err.length() == 0; i++) {
 
@@ -189,7 +187,7 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
             Result *res = connection->query(q);
             const char* err= connection->getError();
             if(res && strlen(err) == 0) {
-                if(res->getRowCount() > 0) {
+                if(res->getRowCount() >= 0) {
                     dupids.push_back(aid);
                     dups +=  dups.length() > 0 ? "," + srcs[i].full_name : srcs[i].full_name;
                 }
@@ -198,16 +196,13 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
                 d->err = std::string(err);
             }
             if(res) delete res;
-            printf("  2a: step %ld: error \"%s\": att ids size %ld srcs size %ld\n",
-                   i, d->err.c_str(), att_ids.size(), srcs.size());
-
         }
     }
     else if(att_ids.size() != srcs.size())
         d->err = "inconsistent number of requested src and IDs from db";
 
     if(dups.length() > 0)
-        d->warn = "skipped duplicate sources " + dups + "already in context " + std::to_string(context_id);
+        d->warn = "skipped duplicate sources:\n" + dups + ":\nalready in context " + std::to_string(context_id);
 
     // 2b. insert // att_ids.size() may differ from srcs.size because 2a may have erased
     //     duplicate (id_context,id_att)
