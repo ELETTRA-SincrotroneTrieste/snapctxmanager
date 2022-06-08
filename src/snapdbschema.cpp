@@ -139,7 +139,6 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
             res->next();
             row = res->getCurrentRow();
             // reuse existing att ID for the given full_name and facility
-            printf("pushing back id %d ids siz %ld\n", atoi(row->getField(0)), att_ids.size());
             att_ids.push_back(atoi(row->getField(0)));
             delete res;
         }
@@ -206,20 +205,11 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
 
     // 2b. insert // att_ids.size() may differ from srcs.size because 2a may have erased
     //     duplicate (id_context,id_att)
-    printf("2b. error \"%s\" warning %s: att ids size %ld\n", d->err.c_str(), d->warn.c_str(), att_ids.size());
-
     for(size_t i = 0; i < att_ids.size() && d->err.length() == 0; i++) {
         int &aid = att_ids[i];
-        printf("   2b. error \"%s\": att ids size %ld processing att id %d\n",
-               d->err.c_str(), att_ids.size(), aid);
         if(std::find(dupids.begin(), dupids.end(), aid) == dupids.end()) {
             memset(q, 0, sizeof(char) * 2048);
-
             snprintf(q, 2048, "INSERT INTO list (id_context, id_att) VALUES (%d, %d)", context_id, aid);
-
-            printf("   2b. error \"%s\": query \"%s\" att id %d\n",
-                   d->err.c_str(), q, aid);
-
             Result *res = connection->query(q);
             const char* err= connection->getError();
             if(strlen(err) > 0) {
@@ -230,8 +220,6 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
             }
             if(res) delete res;
         }
-        else
-            printf("     \e[1;31m2b duplicate aid %d\e[0m\n", aid);
     }
     return r;
 }
