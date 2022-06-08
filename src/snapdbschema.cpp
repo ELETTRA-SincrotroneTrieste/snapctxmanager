@@ -179,8 +179,10 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
     // 2a. check for potential duplicates
     std::vector <int> dupids; // will be effectively inserted into list
     std::string dups;
+    printf("2a. error \"%s\": att ids size %ld srcs size %ld\n", d->err.c_str(), att_ids.size(), srcs.size());
     if(d->err.length() == 0 && att_ids.size() == srcs.size()) {
         for(size_t i = 0; i < att_ids.size() && d->err.length() == 0; i++) {
+
             int &aid = att_ids[i];
             snprintf(q, 2048, "SELECT id_context,id_att FROM list WHERE id_context=%d "
                               "AND id_att=%d", context_id, aid);
@@ -196,6 +198,9 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
                 d->err = std::string(err);
             }
             if(res) delete res;
+            printf("  2a: step %ld: error \"%s\": att ids size %ld srcs size %ld\n",
+                   i, d->err.c_str(), att_ids.size(), srcs.size());
+
         }
     }
     else if(att_ids.size() != srcs.size())
@@ -206,6 +211,8 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
 
     // 2b. insert // att_ids.size() may differ from srcs.size because 2a may have erased
     //     duplicate (id_context,id_att)
+    printf("2b. error \"%s\": att ids size %ld\n", d->err.c_str(), att_ids.size());
+
     for(size_t i = 0; i < att_ids.size() && d->err.length() == 0; i++) {
         int &aid = att_ids[i];
         if(std::find(dupids.begin(), dupids.end(), aid) == dupids.end()) {
