@@ -211,7 +211,7 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
 
     // 2b. insert // att_ids.size() may differ from srcs.size because 2a may have erased
     //     duplicate (id_context,id_att)
-    printf("2b. error \"%s\": att ids size %ld\n", d->err.c_str(), att_ids.size());
+    printf("2b. error \"%s\" warning %s: att ids size %ld\n", d->err.c_str(), d->warn.c_str(), att_ids.size());
 
     for(size_t i = 0; i < att_ids.size() && d->err.length() == 0; i++) {
         int &aid = att_ids[i];
@@ -235,6 +235,8 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
             }
             if(res) delete res;
         }
+        else
+            printf("     \e[1;31m2b duplicate aid %d\e[0m\n", aid);
     }
     return r;
 }
