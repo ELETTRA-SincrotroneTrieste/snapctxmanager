@@ -13,7 +13,6 @@ std::vector<Ast> TgUtils::get(const std::vector<std::string> &srcs) {
             Tango::DeviceProxy *de = new Tango::DeviceProxy(dev);
             Tango::AttributeInfoEx x = de->get_attribute_config(a);
             r.push_back(Ast(s, x.max_dim_x, x.max_dim_y, x.data_type, x.data_format, x.writable));
-            printf("TgUtils::get dev %s att %s\n", dev.c_str(), a.c_str());
             delete de;
         } catch(const Tango::DevFailed& e) {
             if(err.length() > 0)
