@@ -207,7 +207,7 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
         d->err = "inconsistent number of requested src and IDs from db";
 
     if(dups.length() > 0)
-        d->warn = "skipped duplicate sources " + dups;
+        d->warn = "skipped duplicate sources " + dups + "already in context " + std::to_string(context_id);
 
     // 2b. insert // att_ids.size() may differ from srcs.size because 2a may have erased
     //     duplicate (id_context,id_att)
