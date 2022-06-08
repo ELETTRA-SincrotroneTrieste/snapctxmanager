@@ -215,9 +215,16 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
 
     for(size_t i = 0; i < att_ids.size() && d->err.length() == 0; i++) {
         int &aid = att_ids[i];
+        printf("   2b. error \"%s\": att ids size %ld processing att id %d\n",
+               d->err.c_str(), att_ids.size(), aid);
         if(std::find(dupids.begin(), dupids.end(), aid) == dupids.end()) {
             memset(q, 0, sizeof(char) * 2048);
+
             snprintf(q, 2048, "INSERT INTO list (id_context, id_att) VALUES (%d, %d)", context_id, aid);
+
+            printf("   2b. error \"%s\": query \"%s\" att id %d\n",
+                   d->err.c_str(), q, aid);
+
             Result *res = connection->query(q);
             const char* err= connection->getError();
             if(strlen(err) > 0) {
