@@ -144,15 +144,15 @@ void Utils::out_ctx(const Context& c, const std::vector<Ast> &v) const {
     // header
     printf("-\n");
     printf("source"); // prints 9 chars
-    for(size_t s = 0; s < srcM - strlen("source"); s++)
+    for(int s = 0; s < srcM - strlen("source"); s++)
         printf(" ");
     printf("| type");
-    for(size_t s = 0; s < dtM - strlen("type"); s++)
+    for(int s = 0; s < dtM - strlen("type"); s++)
         printf(" ");
     printf("| fmt | wri| max dim x| max dim y");
     if(has_facility)
         printf("| facility ");
-    for(size_t s = 0; s < facM - strlen(" facility"); s++)
+    for(int s = 0; s < facM - strlen(" facility"); s++)
         printf(" ");
     printf("| ID");
     printf("\n");
@@ -163,25 +163,25 @@ void Utils::out_ctx(const Context& c, const std::vector<Ast> &v) const {
 
         // list number / src name
         printf("\033[1;32m%s\033[0m", src.c_str());
-        for(size_t s = 0; s < srcM - src.length(); s++)
+        for(int s = 0; s < srcM - src.length(); s++)
             printf(" ");
         // data type
         printf("| %s", u.data_type(a.data_type).c_str());
-        for(size_t s = 0; s < dtM - u.data_type(a.data_type).length(); s++)
+        for(int s = 0; s < dtM - u.data_type(a.data_type).length(); s++)
             printf(" ");
 
         //        dt     color +df
         printf("| %s%s\033[0m ",
                df == "SCA" ? "\033[0;32m" : ( df == "SPE" ? "\033[0;36m" : "\033[0;35m"), df.c_str()); // data format with color
         printf("| %s", u.writable(a.writable).c_str());
-        for(size_t s = 0; s < strlen("RWW") - u.writable(a.writable).length(); s++)
+        for(int s = 0; s < strlen("RWW") - u.writable(a.writable).length(); s++)
             printf(" ");
         std::string X = std::to_string(a.max_dim_x), Y = std::to_string(a.max_dim_y);
         printf("| %s", X.c_str());
-        for(size_t s = 0; s < strlen("max dim x") - X.length(); s++)
+        for(int s = 0; s < strlen("max dim x") - X.length(); s++)
             printf(" ");
         printf("| %s", Y.c_str());
-        for(size_t s = 0; s < strlen("max dim y") - Y.length(); s++)
+        for(int s = 0; s < strlen("max dim y") - Y.length(); s++)
             printf(" ");
 
         // facility
