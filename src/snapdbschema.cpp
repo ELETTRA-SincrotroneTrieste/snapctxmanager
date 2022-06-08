@@ -140,7 +140,7 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
             res->next();
             row = res->getCurrentRow();
             // reuse existing att ID for the given full_name and facility
-
+            printf("pushing back id %d ids siz %ld\n", atoi(row->getField(0)), att_ids.size());
             att_ids.push_back(atoi(row->getField(0)));
             delete res;
         }
