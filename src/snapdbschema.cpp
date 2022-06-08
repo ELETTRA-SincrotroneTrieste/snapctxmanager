@@ -135,10 +135,12 @@ int SnapDbSchema::link_attributes(Connection *connection, int context_id, const 
         // find if attribute already in ast
         snprintf(q, 2048, "SELECT ID FROM ast WHERE full_name='%s' AND facility='%s'", a.full_name.c_str(), a.facility.c_str());
         res = connection->query(q);
+        printf("executing query %s res row count %d\n", q, res->getRowCount());
         if(res && res->getRowCount() > 0) {
             res->next();
             row = res->getCurrentRow();
             // reuse existing att ID for the given full_name and facility
+
             att_ids.push_back(atoi(row->getField(0)));
             delete res;
         }
