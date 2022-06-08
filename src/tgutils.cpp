@@ -26,9 +26,15 @@ std::vector<Ast> TgUtils::get(const std::vector<std::string> &srcs) {
     return r;
 }
 
+inline constexpr const char * data_type_to_string(int type) {
+    return (type >= Tango::DEV_VOID
+            && type < (static_cast<int>(sizeof(Tango::CmdArgTypeName) / sizeof(Tango::CmdArgTypeName[0]))))
+            ? Tango::CmdArgTypeName[type] : "Unknown";
+}
+
+
 string TgUtils::data_type(int dt) const {
-//    return std::string(Tango::data_type_to_string(dt));
-    return std::to_string(dt);
+    return data_type_to_string(dt);
 }
 
 string TgUtils::data_format(int f) const {
