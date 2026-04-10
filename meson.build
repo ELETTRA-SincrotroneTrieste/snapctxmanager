@@ -37,7 +37,7 @@ includedirs = include_directories('src')
 # for perr, pinfo, etc
 cpp_arguments = [ '-DELETTRA_EU_LIBSQLDB_PRINTINFO=1' ]
 
-deps = [ dependency('libsqldb'), dependency('tango') ]
+deps = [ dependency('sqldb-elettra'), dependency('tango') ]
 
 snapctxmanagerlib = shared_library('snapctxmanager', sources,
         version : meson.project_version(),
