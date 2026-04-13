@@ -116,6 +116,89 @@ int Utils::configure()
     return 1; // 1: error creating dir
 }
 
+void Utils::out_snapshots(const Context &c, const std::vector<Snapshot> &v) const {
+    if(v.empty()) {
+        printf("\033[1;35m!\033[0m no snapshots for context \033[1;32;4m%s\033[0m (id %d)\n",
+               c.name.c_str(), c.id);
+        return;
+    }
+    printf("Snapshots for context \033[1;32;4m%s\033[0m (id \033[1;34m%d\033[0m):\n\n",
+           c.name.c_str(), c.id);
+    // compute column widths
+    size_t cmtW = strlen("comment");
+    size_t timW = strlen("time");
+    for(const Snapshot &s : v) {
+        if(s.comment.length() > cmtW) cmtW = s.comment.length();
+        if(s.time.length()    > timW) timW = s.time.length();
+    }
+    // header
+    printf(" %-6s | %-*s | %-*s\n", "snap_id",
+           (int)timW, "time", (int)cmtW, "comment");
+    printf(" %s-+-%s-+-%s\n",
+           std::string(6,'-').c_str(),
+           std::string(timW,'-').c_str(),
+           std::string(cmtW,'-').c_str());
+    int i = 0;
+    for(const Snapshot &s : v) {
+        printf(" \033[1;34m%-6d\033[0m | \033[0;36m%-*s\033[0m | %s\n",
+               s.id_snap, (int)timW, s.time.c_str(), s.comment.c_str());
+        i++;
+    }
+    printf("\n\033[1;32m%d\033[0m snapshot(s) total\n", i);
+}
+
+void Utils::out_att_snaps(const std::vector<AttSnapRecord> &v) const {
+    if(v.empty()) {
+        printf("\033[1;35m!\033[0m no snapshot records found for the given attribute(s)\n");
+        return;
+    }
+    // compute column widths
+    size_t attW = strlen("attribute");
+    size_t ctxW = strlen("context");
+    size_t timW = strlen("time");
+    size_t cmtW = strlen("comment");
+    size_t valW = strlen("value");
+    for(const AttSnapRecord &r : v) {
+        if(r.full_name.length()    > attW) attW = r.full_name.length();
+        if(r.ctx_name.length()     > ctxW) ctxW = r.ctx_name.length();
+        if(r.snap_time.length()    > timW) timW = r.snap_time.length();
+        if(r.snap_comment.length() > cmtW) cmtW = r.snap_comment.length();
+        size_t vl = r.value.length() + (r.setpoint.empty() ? 0 : r.setpoint.length() + 3); // " / setpoint"
+        if(vl > valW) valW = vl;
+    }
+    if(valW > 60) valW = 60; // cap
+
+    // header
+    printf(" %-*s | %-*s | %-6s | %-*s | %-*s | %-*s\n",
+           (int)attW, "attribute",
+           (int)ctxW, "context",
+           "snap_id",
+           (int)timW, "time",
+           (int)cmtW, "comment",
+           (int)valW, "value");
+    auto sep = [](size_t w){ return std::string(w, '-'); };
+    printf(" %s-+-%s-+-%-6s-+-%s-+-%s-+-%s\n",
+           sep(attW).c_str(), sep(ctxW).c_str(), "------",
+           sep(timW).c_str(), sep(cmtW).c_str(), sep(valW).c_str());
+
+    for(const AttSnapRecord &r : v) {
+        std::string vdisp = r.value;
+        if(!r.setpoint.empty())
+            vdisp += " / " + r.setpoint;
+        if(vdisp.length() > valW)
+            vdisp = vdisp.substr(0, valW - 3) + "...";
+        printf(" \033[1;32m%-*s\033[0m | \033[0;33m%-*s\033[0m | \033[1;34m%-6d\033[0m"
+               " | \033[0;36m%-*s\033[0m | %-*s | \033[0;35m%-*s\033[0m\n",
+               (int)attW, r.full_name.c_str(),
+               (int)ctxW, r.ctx_name.c_str(),
+               r.snap_id,
+               (int)timW, r.snap_time.c_str(),
+               (int)cmtW, r.snap_comment.c_str(),
+               (int)valW, vdisp.c_str());
+    }
+    printf("\n\033[1;32m%ld\033[0m record(s) total\n", v.size());
+}
+
 void Utils::out_ctxs(const std::vector<Context> &v) const {
     int i = 0;
     for(const Context& c : v)

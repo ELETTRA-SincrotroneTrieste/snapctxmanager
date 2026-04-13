@@ -16,9 +16,9 @@ the option described in 1.
 
 II.
 snapctxman operates on the three context configuration tables `context',
-`ast' and `list'. Data tables are not managed whatsoever. This implies
-that the delete function (-D, section 7) shall remove attributes from the 
-given context but will leave stray data in the respective tables.
+`ast' and `list'. By default, removing attributes (-D, section 7) leaves
+snapshot data untouched. Use --purge (-P) together with -D to also delete
+all stored values for the removed attributes (section 7).
 
 1. Show a context by name
 ------------------------------------------------------------------------
@@ -86,8 +86,16 @@ with the list of attributes one per line, as described in 3b. NOTE 2.
 
 > snapctxman -D -f list.csv -n "context name"
 
-Delete a list of attributes from the given context, with the observations
-in 3b. NOTE 2 and in "General notes, II"
+Delete a list of attributes from the given context. Snapshot data is kept
+by default (see General notes, II). To also purge all stored values:
+
+> snapctxman -D -P -f list.csv -n "context name"
+
+-P (--purge): deletes rows from all value tables (t_sc_num_1val, etc.)
+for snapshots belonging to the given context only.
+
+NOTE: if the attribute is still present in another context its data there
+is not touched; only this context's snapshots are purged.
 
 
 8. Rename attributes, context independently
@@ -122,28 +130,54 @@ note that:
     shall rename old source s1 into t1, s2 into t2 and s3 into t3.
     
     
-9. Documentation
+9. List snapshots for a context
 ------------------------------------------------------------------------
 
-> snapctxman -h 
+> snapctxman -S "context name"
+
+> snapctxman -S 42            (context id)
+
+Lists all snapshots stored for the given context, newest first.
+Each row shows snap_id, timestamp and comment.
+Use the snap_id with saverestore-restore-cli to restore a snapshot.
+
+
+10. Query snapshot values for specific attributes
+------------------------------------------------------------------------
+
+> snapctxman -q "domain/family/member/attr1,domain/family/member/attr2"
+
+Shows all snapshot values ever stored for the listed attributes, across
+all contexts. Attributes may belong to different contexts.
+
+Output columns: attribute | context | snap_id | time | comment | value
+
+For READ_WRITE attributes the value column shows "read / setpoint".
+Results are sorted by attribute name and snapshot time (newest first).
+
+
+11. Documentation
+------------------------------------------------------------------------
+
+> snapctxman -h
 
 or simply
 
-> snapctxman 
+> snapctxman
 
 shows this documentation page.
 
-The same effect shall be expected when a combination of command line 
+The same effect shall be expected when a combination of command line
 parameters is invalid.
 
 
-10. Contacts
+12. Contacts
 ------------------------------------------------------------------------
 
 giacomo.strangolino@elettra.eu
 
 
-11. Source code and project page
+13. Source code and project page
 ------------------------------------------------------------------------
 
 https://github.com/ELETTRA-SincrotroneTrieste/snapctxmanager

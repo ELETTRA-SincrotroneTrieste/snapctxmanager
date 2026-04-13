@@ -293,9 +293,11 @@ int SnapDbSchema::ctx_remove(Connection *conn, const std::string& id_or_nam) {
     return r;
 }
 
-int SnapDbSchema::srcs_remove(Connection *conn, const std::string &id_or_nam, const std::vector<std::string> &srcs) {
+int SnapDbSchema::srcs_remove(Connection *conn, const std::string &id_or_nam,
+                              const std::vector<std::string> &srcs, bool purge_data) {
     int ar = 0; // affected rows
     d->err.clear();
+    d->warn.clear();
     char q[2048];
     int cxid = ctx_id(conn, id_or_nam);
     if(cxid > 0) {
@@ -335,8 +337,39 @@ int SnapDbSchema::srcs_remove(Connection *conn, const std::string &id_or_nam, co
                     delete res;
                 }
             }
+
+            // purge snapshot data for this context's snapshots if requested
+            if(purge_data && d->err.empty() && !id_atts.empty()) {
+                static const char *val_tables[] = {
+                    "t_sc_num_1val", "t_sc_num_2val",
+                    "t_sc_str_1val", "t_sc_str_2val",
+                    "t_sp_1val",     "t_sp_2val",
+                    nullptr
+                };
+                for(int idatt : id_atts) {
+                    for(int ti = 0; val_tables[ti] != nullptr && d->err.empty(); ti++) {
+                        snprintf(q, 2048,
+                                 "DELETE FROM %s WHERE id_att=%d"
+                                 " AND id_snap IN (SELECT id_snap FROM snapshot WHERE id_context=%d)",
+                                 val_tables[ti], idatt, cxid);
+                        Result *res = conn->query(q);
+                        if(!res)
+                            d->err = std::string(conn->getError());
+                        else {
+                            ar += conn->getAffectedRows();
+                            delete res;
+                        }
+                    }
+                }
+                d->warn = "Snapshot data deleted for removed attribute(s). "
+                          "Omit --purge to keep data for future retrieval.";
+            }
+            else if(!purge_data && d->err.empty()) {
+                d->warn = "Attribute(s) removed from context. Snapshot data left in place. "
+                          "Use --purge to also delete all stored values.";
+            }
+
             // orphan attributes in ast?
-            std::vector <int> id_atts_del;
             for(size_t i = 0; i < id_atts.size() && d->err.length() == 0; i++) {
                 snprintf(q, 2048, "SELECT context.name,ast.full_name FROM context,list,ast"
                                   " WHERE id_att=%d AND context.id_context=list.id_context"
@@ -493,6 +526,102 @@ bool SnapDbSchema::get_context(Connection *conn, const std::string &id_or_nam, C
     return d->err.length() == 0;
 }
 
+bool SnapDbSchema::get_context_sorted(Connection *conn, const std::string &id_or_nam, Context &ctx, std::vector<Ast> &v) {
+    // First fetch the context metadata (same as get_context)
+    bool found = get_context(conn, id_or_nam, ctx, v);
+    if(!found || v.empty())
+        return found;
+    // Refetch attributes with section_order JOIN
+    char q[2048];
+    memset(q, 0, sizeof(char) * 2048);
+    enum Fields { ID = 0, FN, DT, DF, W, X, Y, F, MAXFIELDS };
+    snprintf(q, 2048,
+             "SELECT ID,full_name,data_type,data_format,writable,max_dim_x,max_dim_y,facility "
+             "FROM ast,list,section_order "
+             "WHERE ast.ID=list.id_att AND section_order.section=ast.domain "
+             "AND list.id_context=%d "
+             "ORDER BY section_order.position,ast.full_name ASC", ctx.id);
+    Result *res = conn->query(q);
+    if(res && res->getRowCount() > 0) {
+        v.clear();
+        v.reserve(res->getRowCount());
+        Row *row = nullptr;
+        while(res->next() > 0) {
+            row = res->getCurrentRow();
+            if(row && row->getFieldCount() == MAXFIELDS) {
+                Ast a(row->getField(FN), atoi(row->getField(X)), atoi(row->getField(Y)),
+                      atoi(row->getField(DT)), atoi(row->getField(DF)), atoi(row->getField(W)));
+                a.facility = row->getField(F);
+                a.id = atoi(row->getField(0));
+                v.push_back(a);
+            }
+        }
+        delete res;
+    }
+    // If query failed (e.g. section_order doesn't exist), keep unsorted result from get_context
+    return d->err.length() == 0;
+}
+
+std::vector<std::string> SnapDbSchema::section_order_list(Connection *conn) {
+    std::vector<std::string> sections;
+    Result *res = conn->query("SELECT section FROM section_order ORDER BY position");
+    if(res && res->getRowCount() > 0) {
+        while(res->next() > 0) {
+            Row *row = res->getCurrentRow();
+            if(row && row->getFieldCount() >= 1)
+                sections.push_back(row->getField(0));
+        }
+        delete res;
+    }
+    return sections;
+}
+
+std::vector<std::string> SnapDbSchema::selection_type_order(Connection *conn, int ctx_id) {
+    std::vector<std::string> types;
+    char q[512];
+    snprintf(q, sizeof(q),
+             "SELECT DISTINCT type_order.type FROM selection,type_order "
+             "WHERE selection.context=%d AND selection.type=type_order.type "
+             "ORDER BY type_order.position", ctx_id);
+    Result *res = conn->query(q);
+    if(res && res->getRowCount() > 0) {
+        while(res->next() > 0) {
+            Row *row = res->getCurrentRow();
+            if(row && row->getFieldCount() >= 1)
+                types.push_back(row->getField(0));
+        }
+        delete res;
+    }
+    return types;
+}
+
+std::vector<DeviceInfo> SnapDbSchema::selection_devices(Connection *conn, int ctx_id) {
+    std::vector<DeviceInfo> devices;
+    char q[512];
+    snprintf(q, sizeof(q),
+             "SELECT device,devices.section,devices.type "
+             "FROM devices,selection,section_order "
+             "WHERE context=%d AND devices.section=selection.section AND "
+             "devices.type=selection.type AND "
+             "section_order.section=devices.section "
+             "ORDER BY section_order.position", ctx_id);
+    Result *res = conn->query(q);
+    if(res && res->getRowCount() > 0) {
+        while(res->next() > 0) {
+            Row *row = res->getCurrentRow();
+            if(row && row->getFieldCount() >= 3) {
+                DeviceInfo di;
+                di.device  = row->getField(0);
+                di.section = row->getField(1);
+                di.type    = row->getField(2);
+                devices.push_back(di);
+            }
+        }
+        delete res;
+    }
+    return devices;
+}
+
 int SnapDbSchema::search(Connection *conn, const std::string &search, std::vector<Context> &ctxs) {
     d->err.clear();
     ctxs.clear();
@@ -522,6 +651,262 @@ std::vector<Context> SnapDbSchema::ctxlist(Connection *conn) {
     std::vector<Context> ctxs;
     search(conn, "", ctxs);
     return ctxs;
+}
+
+int SnapDbSchema::snap_list(Connection *conn, int context_id, std::vector<Snapshot> &snaps) {
+    d->err.clear();
+    snaps.clear();
+    char q[512];
+    snprintf(q, sizeof(q),
+             "SELECT id_snap,id_context,time,snap_comment FROM snapshot "
+             "WHERE id_context=%d ORDER BY time DESC", context_id);
+    Result *res = conn->query(q);
+    if(!res) { d->err = conn->getError(); return 0; }
+    while(res->next() > 0) {
+        Row *row = res->getCurrentRow();
+        if(row && row->getFieldCount() == 4) {
+            Snapshot s;
+            s.id_snap    = atoi(row->getField(0));
+            s.id_context = atoi(row->getField(1));
+            s.time       = row->getField(2) ? row->getField(2) : "";
+            s.comment    = row->getField(3) ? row->getField(3) : "";
+            snaps.push_back(s);
+            delete row;
+        }
+    }
+    delete res;
+    return (int)snaps.size();
+}
+
+int SnapDbSchema::snap_save(Connection *conn, int context_id, const std::string &comment,
+                             const std::vector<SnapSaveRecord> &data) {
+    d->err.clear();
+    char q[4096];
+    // 1. Create snapshot row
+    snprintf(q, sizeof(q),
+             "INSERT INTO snapshot (id_context,time,snap_comment) VALUES (%d,NOW(),'%s')",
+             context_id, comment.c_str());
+    Result *res = conn->query(q);
+    if(!res || strlen(conn->getError()) > 0) {
+        d->err = conn->getError();
+        if(res) delete res;
+        return -1;
+    }
+    int snap_id = conn->getLastInsertId();
+    if(res) delete res;
+
+    // 2. Group records by snap_type and build bulk INSERT strings
+    struct Vals {
+        std::string num1, num2, str1, str2, sp1, sp2;
+    } v;
+
+    for(const SnapSaveRecord &r : data) {
+        if(r.value == "NULL" || r.value.empty()) continue; // skip error records
+        char row_buf[1024];
+        switch(r.snap_type) {
+        case stScNum1:
+            snprintf(row_buf, sizeof(row_buf), "(%d,%d,%s),", snap_id, r.id_att, r.value.c_str());
+            v.num1 += row_buf; break;
+        case stScNum2:
+            snprintf(row_buf, sizeof(row_buf), "(%d,%d,%s,%s),", snap_id, r.id_att,
+                     r.value.c_str(), r.setpoint.empty() ? r.value.c_str() : r.setpoint.c_str());
+            v.num2 += row_buf; break;
+        case stScStr1:
+            snprintf(row_buf, sizeof(row_buf), "(%d,%d,'%s'),", snap_id, r.id_att, r.value.c_str());
+            v.str1 += row_buf; break;
+        case stScStr2:
+            snprintf(row_buf, sizeof(row_buf), "(%d,%d,'%s','%s'),", snap_id, r.id_att,
+                     r.value.c_str(), r.setpoint.empty() ? r.value.c_str() : r.setpoint.c_str());
+            v.str2 += row_buf; break;
+        case stSp1:
+            snprintf(row_buf, sizeof(row_buf), "(%d,%d,%d,'%s'),", snap_id, r.id_att,
+                     r.dim_x, r.value.c_str());
+            v.sp1 += row_buf; break;
+        case stSp2:
+            snprintf(row_buf, sizeof(row_buf), "(%d,%d,%d,'%s','%s'),", snap_id, r.id_att,
+                     r.dim_x, r.value.c_str(), r.setpoint.empty() ? r.value.c_str() : r.setpoint.c_str());
+            v.sp2 += row_buf; break;
+        default: break;
+        }
+    }
+
+    auto do_insert = [&](const std::string &table, std::string &vals) {
+        if(vals.empty()) return;
+        if(!vals.empty() && vals.back() == ',') vals.pop_back();
+        snprintf(q, sizeof(q), "INSERT INTO %s VALUES%s", table.c_str(), vals.c_str());
+        Result *r = conn->query(q);
+        if(!r || strlen(conn->getError()) > 0)
+            d->err += std::string(conn->getError()) + " ";
+        if(r) delete r;
+    };
+
+    do_insert("t_sc_num_1val", v.num1);
+    do_insert("t_sc_num_2val", v.num2);
+    do_insert("t_sc_str_1val", v.str1);
+    do_insert("t_sc_str_2val", v.str2);
+    do_insert("t_sp_1val",     v.sp1);
+    do_insert("t_sp_2val",     v.sp2);
+
+    return d->err.empty() ? snap_id : -1;
+}
+
+int SnapDbSchema::snap_load(Connection *conn, int snap_id, std::vector<SnapLoadRecord> &data) {
+    d->err.clear();
+    data.clear();
+    char q[1024];
+
+    struct TblInfo {
+        const char *table;
+        SnapType    type;
+        bool        has_setpoint;
+        bool        has_dimx;
+    };
+    static const TblInfo tables[] = {
+        { "t_sc_num_1val", stScNum1, false, false },
+        { "t_sc_num_2val", stScNum2, true,  false },
+        { "t_sc_str_1val", stScStr1, false, false },
+        { "t_sc_str_2val", stScStr2, true,  false },
+        { "t_sp_1val",     stSp1,    false, true  },
+        { "t_sp_2val",     stSp2,    true,  true  },
+        { nullptr, stInvalid, false, false }
+    };
+
+    for(int ti = 0; tables[ti].table != nullptr; ti++) {
+        const TblInfo &ti_ = tables[ti];
+        if(ti_.has_dimx && ti_.has_setpoint)
+            // t_sp_2val: columns are (id_snap,id_att,dim_x,read_value,write_value)
+            snprintf(q, sizeof(q),
+                     "SELECT s.id_snap,s.id_att,a.full_name,a.device,s.read_value,s.write_value,s.dim_x,"
+                     "a.data_type,a.data_format,a.writable "
+                     "FROM %s s JOIN ast a ON s.id_att=a.ID WHERE s.id_snap=%d",
+                     ti_.table, snap_id);
+        else if(ti_.has_dimx)
+            // t_sp_1val: columns are (id_snap,id_att,dim_x,value)
+            snprintf(q, sizeof(q),
+                     "SELECT s.id_snap,s.id_att,a.full_name,a.device,s.value,'',s.dim_x,"
+                     "a.data_type,a.data_format,a.writable "
+                     "FROM %s s JOIN ast a ON s.id_att=a.ID WHERE s.id_snap=%d",
+                     ti_.table, snap_id);
+        else if(ti_.has_setpoint)
+            // t_sc_num_2val / t_sc_str_2val: columns are (id_snap,id_att,read_value,write_value)
+            snprintf(q, sizeof(q),
+                     "SELECT s.id_snap,s.id_att,a.full_name,a.device,s.read_value,s.write_value,0,"
+                     "a.data_type,a.data_format,a.writable "
+                     "FROM %s s JOIN ast a ON s.id_att=a.ID WHERE s.id_snap=%d",
+                     ti_.table, snap_id);
+        else
+            snprintf(q, sizeof(q),
+                     "SELECT s.id_snap,s.id_att,a.full_name,a.device,s.value,'',0,"
+                     "a.data_type,a.data_format,a.writable "
+                     "FROM %s s JOIN ast a ON s.id_att=a.ID WHERE s.id_snap=%d",
+                     ti_.table, snap_id);
+
+        Result *res = conn->query(q);
+        if(!res) { d->err = conn->getError(); return (int)data.size(); }
+        while(res->next() > 0) {
+            Row *row = res->getCurrentRow();
+            if(row && row->getFieldCount() == 10) {
+                SnapLoadRecord r;
+                r.id_snap     = atoi(row->getField(0));
+                r.id_att      = atoi(row->getField(1));
+                r.full_name   = row->getField(2) ? row->getField(2) : "";
+                r.device      = row->getField(3) ? row->getField(3) : "";
+                r.value       = row->getField(4) ? row->getField(4) : "NULL";
+                r.setpoint    = row->getField(5) ? row->getField(5) : "";
+                r.dim_x       = atoi(row->getField(6));
+                r.data_type   = (char)atoi(row->getField(7));
+                r.data_format = (char)atoi(row->getField(8));
+                r.writable    = (char)atoi(row->getField(9));
+                r.snap_type   = ti_.type;
+                data.push_back(r);
+                delete row;
+            }
+        }
+        delete res;
+    }
+    return (int)data.size();
+}
+
+int SnapDbSchema::snap_query_by_atts(Connection *conn, const std::vector<std::string> &atts,
+                                      std::vector<AttSnapRecord> &results) {
+    d->err.clear();
+    results.clear();
+    if(atts.empty()) return 0;
+
+    // Build IN clause: ('att1','att2',...)
+    std::string in_list;
+    for(size_t i = 0; i < atts.size(); i++) {
+        if(i > 0) in_list += ",";
+        in_list += "'" + atts[i] + "'";
+    }
+
+    struct TblInfo {
+        const char *table;
+        SnapType    type;
+        bool        has_setpoint;
+        bool        has_dimx;
+    };
+    static const TblInfo tables[] = {
+        { "t_sc_num_1val", stScNum1, false, false },
+        { "t_sc_num_2val", stScNum2, true,  false },
+        { "t_sc_str_1val", stScStr1, false, false },
+        { "t_sc_str_2val", stScStr2, true,  false },
+        { "t_sp_1val",     stSp1,    false, true  },
+        { "t_sp_2val",     stSp2,    true,  true  },
+        { nullptr, stInvalid, false, false }
+    };
+
+    for(int ti = 0; tables[ti].table != nullptr; ti++) {
+        const TblInfo &tbl = tables[ti];
+        // Columns: ctx_id, ctx_name, snap_id, snap_time, snap_comment,
+        //          full_name, data_type, data_format, writable,
+        //          value, setpoint, dim_x  (12 total)
+        std::string q;
+        q.reserve(512);
+        q = "SELECT c.id_context,c.name,sn.id_snap,sn.time,sn.snap_comment,"
+            "a.full_name,a.data_type,a.data_format,a.writable,";
+        if(tbl.has_setpoint && tbl.has_dimx)
+            q += "v.read_value,v.write_value,v.dim_x";
+        else if(tbl.has_setpoint)
+            q += "v.read_value,v.write_value,0";
+        else if(tbl.has_dimx)
+            q += "v.value,'',v.dim_x";
+        else
+            q += "v.value,'',0";
+        q += std::string(" FROM ") + tbl.table +
+             " v JOIN ast a ON v.id_att=a.ID"
+             " JOIN list l ON a.ID=l.id_att"
+             " JOIN context c ON l.id_context=c.id_context"
+             " JOIN snapshot sn ON sn.id_snap=v.id_snap AND sn.id_context=c.id_context"
+             " WHERE a.full_name IN (" + in_list + ")"
+             " ORDER BY a.full_name,sn.time DESC";
+
+        Result *res = conn->query(q.c_str());
+        if(!res) { d->err = conn->getError(); return (int)results.size(); }
+        while(res->next() > 0) {
+            Row *row = res->getCurrentRow();
+            if(row && row->getFieldCount() == 12) {
+                AttSnapRecord r;
+                r.ctx_id      = atoi(row->getField(0));
+                r.ctx_name    = row->getField(1) ? row->getField(1) : "";
+                r.snap_id     = atoi(row->getField(2));
+                r.snap_time   = row->getField(3) ? row->getField(3) : "";
+                r.snap_comment= row->getField(4) ? row->getField(4) : "";
+                r.full_name   = row->getField(5) ? row->getField(5) : "";
+                r.data_type   = (char)atoi(row->getField(6));
+                r.data_format = (char)atoi(row->getField(7));
+                r.writable    = (char)atoi(row->getField(8));
+                r.value       = row->getField(9)  ? row->getField(9)  : "NULL";
+                r.setpoint    = row->getField(10) ? row->getField(10) : "";
+                r.dim_x       = atoi(row->getField(11));
+                r.snap_type   = tbl.type;
+                results.push_back(r);
+                delete row;
+            }
+        }
+        delete res;
+    }
+    return (int)results.size();
 }
 
 std::string SnapDbSchema::error() const {

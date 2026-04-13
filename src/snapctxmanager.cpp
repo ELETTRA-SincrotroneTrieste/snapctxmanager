@@ -147,12 +147,13 @@ int SnapCtxManager::register_context(const Context& c,
     return nrows;
 }
 
-int SnapCtxManager::remove_from_ctx(const std::string &ctxnam, const std::vector<std::string> &srcs) {
+int SnapCtxManager::remove_from_ctx(const std::string &ctxnam, const std::vector<std::string> &srcs,
+                                     bool purge_data) {
     d->msg.clear();
     int r = -1;
     if(!d->dbschema)
         return r;
-    r = d->dbschema->srcs_remove(d->connection, ctxnam, srcs);
+    r = d->dbschema->srcs_remove(d->connection, ctxnam, srcs, purge_data);
     d->msg = d->dbschema->error();
     return r;
 }
@@ -245,12 +246,85 @@ std::vector<Context> SnapCtxManager::ctxlist() {
     return ctxs;
 }
 
+int SnapCtxManager::snap_list(int context_id, std::vector<Snapshot> &snaps) {
+    d->msg.clear();
+    if(!d->dbschema) return 0;
+    int n = d->dbschema->snap_list(d->connection, context_id, snaps);
+    d->msg = d->dbschema->error();
+    return n;
+}
+
+int SnapCtxManager::snap_save(int context_id, const std::string &comment,
+                               const std::vector<SnapSaveRecord> &data) {
+    d->msg.clear();
+    if(!d->dbschema) return -1;
+    int id = d->dbschema->snap_save(d->connection, context_id, comment, data);
+    d->msg = d->dbschema->error();
+    return id;
+}
+
+int SnapCtxManager::snap_load(int snap_id, std::vector<SnapLoadRecord> &data) {
+    d->msg.clear();
+    if(!d->dbschema) return 0;
+    int n = d->dbschema->snap_load(d->connection, snap_id, data);
+    d->msg = d->dbschema->error();
+    return n;
+}
+
+int SnapCtxManager::snap_query_by_atts(const std::vector<std::string> &atts,
+                                        std::vector<AttSnapRecord> &results) {
+    d->msg.clear();
+    if(!d->dbschema) return 0;
+    int n = d->dbschema->snap_query_by_atts(d->connection, atts, results);
+    d->msg = d->dbschema->error();
+    return n;
+}
+
 bool SnapCtxManager::query(const char *query, Result *&result, double *elapsed) {
     bool success = false;
     d->msg.clear();
-    if(d->connection != NULL && d->connection->isConnected()) {
+    if(d->connection != nullptr && d->connection->isConnected()) {
+        result = d->connection->query(query);
+        if(!result)
+            d->msg = d->connection->getError();
+        else
+            success = true;
+    } else {
+        d->msg = "SnapCtxManager::query: not connected";
     }
     return success;
+}
+
+bool SnapCtxManager::get_context_sorted(const std::string &id_or_nam, Context &ctx, std::vector<Ast> &v) {
+    d->msg.clear();
+    if(!d->dbschema) return false;
+    bool ok = d->dbschema->get_context_sorted(d->connection, id_or_nam, ctx, v);
+    d->msg = d->dbschema->error();
+    return ok;
+}
+
+std::vector<std::string> SnapCtxManager::section_order_list() {
+    d->msg.clear();
+    if(!d->dbschema) return {};
+    auto r = d->dbschema->section_order_list(d->connection);
+    d->msg = d->dbschema->error();
+    return r;
+}
+
+std::vector<std::string> SnapCtxManager::selection_type_order(int ctx_id) {
+    d->msg.clear();
+    if(!d->dbschema) return {};
+    auto r = d->dbschema->selection_type_order(d->connection, ctx_id);
+    d->msg = d->dbschema->error();
+    return r;
+}
+
+std::vector<DeviceInfo> SnapCtxManager::selection_devices(int ctx_id) {
+    d->msg.clear();
+    if(!d->dbschema) return {};
+    auto r = d->dbschema->selection_devices(d->connection, ctx_id);
+    d->msg = d->dbschema->error();
+    return r;
 }
 
 void SnapCtxManager::setDbSchemaListener(SnapDbSchemaListener *l) {

@@ -3,12 +3,15 @@
 
 #include <string>
 #include <snapctxmanager.h>
+#include <snapdbschema.h>
 
 class Utils
 {
 public:
     void out_ctxs(const std::vector<Context> &v) const;
     void out_ctx(const Context &c, const std::vector<Ast> &v) const;
+    void out_snapshots(const Context &c, const std::vector<Snapshot> &v) const;
+    void out_att_snaps(const std::vector<AttSnapRecord> &v) const;
     void usage(const char *appnam);
     std::string conf_dir() const;
     std::string conf_file_path() const;

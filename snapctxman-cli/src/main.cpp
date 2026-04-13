@@ -57,12 +57,12 @@ int main(int argc, char **argv)
     DbSettings *qc = nullptr;
     int ch;
     std::string dbc, snapc; // db conf snap conf file names
-    std::string name, author, reason, description, search, renatts;
-    bool remove = false, configure = false, add = false;
+    std::string name, author, reason, description, search, renatts, snapctx, queryatts;
+    bool remove = false, configure = false, add = false, purge = false;
     bool op = false;
     bool ctxlist = false; // list contexts
     Utils uti;
-    while ((ch = getopt(argc, argv, "n:a:r:d:c:f:s:R:ADilh")) != -1) {
+    while ((ch = getopt(argc, argv, "n:a:r:d:c:f:s:S:R:q:ADPilh")) != -1) {
         switch (ch) {
         case 'c':
             dbc = std::string(optarg);
@@ -84,6 +84,15 @@ int main(int argc, char **argv)
             break;
         case 's':
             search = std::string(optarg);
+            break;
+        case 'S':
+            snapctx = std::string(optarg);
+            break;
+        case 'q':
+            queryatts = std::string(optarg);
+            break;
+        case 'P':
+            purge = true;
             break;
         case 'i':
             configure  = true;
@@ -173,11 +182,13 @@ int main(int argc, char **argv)
                     }
                     else if(!add && remove && srcs.size() > 0 && name.length()) {
                         op = true;
-                        int r = scm->remove_from_ctx(name, srcs);
+                        int r = scm->remove_from_ctx(name, srcs, purge);
                         if(r <= 0)
                             perr("failed to remove %ld attributes from context '%s': %s",  srcs.size(), name.c_str(), scm->error().c_str());
                         printf("%d database rows affected removing \033[1;31m %ld srcs from %s \033[0;36m[took %ldms]\033[0m\n",
                                r, srcs.size(), name.c_str(), duration());
+                        if(scm->warning().length() > 0)
+                            printf("\033[1;33m>\033[0m %s\n", scm->warning().c_str());
                     }
                     else if(!add && remove && name.length() > 0) {
                         op = true;
@@ -242,6 +253,44 @@ int main(int argc, char **argv)
                         }
                         if(scm->warning().length() > 0)
                             printf("\033[1;33;2mWARNING\033[0m: %s\n", scm->warning().c_str());
+                    }
+                    else if(snapctx.length() > 0 && !add && !remove) {
+                        op = true;
+                        // resolve context by name or id
+                        Context c;
+                        std::vector<Ast> va;
+                        bool found = scm->get_context(snapctx, c, va);
+                        if(!found && scm->error().find("no attributes") == std::string::npos) {
+                            perr("%s", scm->error().c_str());
+                        } else {
+                            std::vector<Snapshot> snaps;
+                            int n = scm->snap_list(c.id, snaps);
+                            if(scm->error().length() > 0)
+                                perr("%s", scm->error().c_str());
+                            else {
+                                uti.out_snapshots(c, snaps);
+                                printf("\033[0;36m[took %ldms]\033[0m\n", duration());
+                            }
+                        }
+                    }
+                    else if(queryatts.length() > 0 && !add && !remove) {
+                        op = true;
+                        std::vector<std::string> qatts = split(queryatts, ',');
+                        // strip empty tokens (trailing comma)
+                        qatts.erase(std::remove_if(qatts.begin(), qatts.end(),
+                                    [](const std::string &s){ return s.empty(); }), qatts.end());
+                        if(qatts.empty()) {
+                            perr("no attribute names given after -q");
+                        } else {
+                            std::vector<AttSnapRecord> recs;
+                            int n = scm->snap_query_by_atts(qatts, recs);
+                            if(scm->error().length() > 0)
+                                perr("%s", scm->error().c_str());
+                            else {
+                                uti.out_att_snaps(recs);
+                                printf("\033[0;36m[took %ldms]\033[0m\n", duration());
+                            }
+                        }
                     }
                     else if(renatts.length() > 0 && srcs.size() > 0) {
                         op = true;

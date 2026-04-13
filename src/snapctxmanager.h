@@ -56,14 +56,34 @@ public:
     bool hasError() const;
 
     int register_context(const Context &c, const std::vector<std::string> & srcs);
-    int remove_from_ctx(const std::string& ctxnam, const std::vector<std::string> & srcs);
+    int remove_from_ctx(const std::string& ctxnam, const std::vector<std::string> & srcs,
+                        bool purge_data = false);
     int add_to_ctx(const std::string& ctxnam, const std::vector<std::string> & srcs);
     int remove_ctx(const std::string& ctxnam);
     bool get_context(const std::string &id_or_nam, Context &ctx, std::vector<Ast>& v);
+
+    /** \brief get_context variant that orders attributes by section_order position (Elettra-specific). */
+    bool get_context_sorted(const std::string &id_or_nam, Context &ctx, std::vector<Ast>& v);
+
+    /** \brief Returns machine sections in display order from the section_order table. */
+    std::vector<std::string> section_order_list();
+
+    /** \brief Returns ordered attribute type names for a context (Elettra-specific selection/type_order tables). */
+    std::vector<std::string> selection_type_order(int ctx_id);
+
+    /** \brief Returns device info records for a context (Elettra-specific devices/selection tables). */
+    std::vector<DeviceInfo> selection_devices(int ctx_id);
+
     int search(const std::string& search, std::vector<Context> &ctxs);
     std::map<std::string, std::vector<Context>> get_contexts_with_atts(const std::vector<std::string> &atts);
     int rename(const std::string& ctxnam, const std::vector<std::string>& olda, const std::vector<std::string> &newa);
     std::vector<Context> ctxlist();
+
+    // --- snapshot operations ---
+    int snap_list(int context_id, std::vector<Snapshot> &snaps);
+    int snap_save(int context_id, const std::string &comment, const std::vector<SnapSaveRecord> &data);
+    int snap_load(int snap_id, std::vector<SnapLoadRecord> &data);
+    int snap_query_by_atts(const std::vector<std::string>& atts, std::vector<AttSnapRecord>& results);
 
 private:
     SnapCtxMan_P *d;

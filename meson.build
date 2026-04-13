@@ -61,7 +61,7 @@ pkgg.generate(
     version : meson.project_version(),
     name : 'libsnapctxmanager',
     filebase : 'snapctxmanager',
-    requires: ['libsqldb'],
+    requires: ['sqldb-elettra'],
     description : project_description )
 
 

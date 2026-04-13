@@ -1,5 +1,5 @@
 #include "tgutils.h"
-#include <tango.h>
+#include <tango/tango.h>
 
 // caller shall check for err.length()
 std::vector<Ast> TgUtils::get(const std::vector<std::string> &srcs) {
@@ -33,11 +33,11 @@ inline constexpr const char * data_type_to_string(int type) {
 }
 
 
-string TgUtils::data_type(int dt) const {
+std::string TgUtils::data_type(int dt) const {
     return data_type_to_string(dt);
 }
 
-string TgUtils::data_format(int f) const {
+std::string TgUtils::data_format(int f) const {
     switch(f) {
     case Tango::SPECTRUM:
         return "SPE";
@@ -50,7 +50,7 @@ string TgUtils::data_format(int f) const {
     }
 }
 
-string TgUtils::writable(int wt) const {
+std::string TgUtils::writable(int wt) const {
     switch(wt) {
     case Tango::READ:
         return "R";
