@@ -653,6 +653,32 @@ std::vector<Context> SnapDbSchema::ctxlist(Connection *conn) {
     return ctxs;
 }
 
+bool SnapDbSchema::get_snapshot(Connection *conn, int snap_id, Snapshot &snap) {
+    d->err.clear();
+    char q[256];
+    snprintf(q, sizeof(q),
+             "SELECT id_snap,id_context,time,snap_comment FROM snapshot WHERE id_snap=%d LIMIT 1",
+             snap_id);
+    Result *res = conn->query(q);
+    if(!res) { d->err = conn->getError(); return false; }
+    bool found = false;
+    if(res->next() > 0) {
+        Row *row = res->getCurrentRow();
+        if(row && row->getFieldCount() == 4) {
+            snap.id_snap    = atoi(row->getField(0));
+            snap.id_context = atoi(row->getField(1));
+            snap.time       = row->getField(2) ? row->getField(2) : "";
+            snap.comment    = row->getField(3) ? row->getField(3) : "";
+            found = true;
+            delete row;
+        }
+    }
+    delete res;
+    if(!found && d->err.empty())
+        d->err = std::string("snapshot not found: id_snap=") + std::to_string(snap_id);
+    return found;
+}
+
 int SnapDbSchema::snap_list(Connection *conn, int context_id, std::vector<Snapshot> &snaps) {
     d->err.clear();
     snaps.clear();

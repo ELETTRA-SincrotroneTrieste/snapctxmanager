@@ -80,6 +80,9 @@ public:
     std::vector<Context> ctxlist();
 
     // --- snapshot operations ---
+    /** Fetch a single snapshot row by snap id. Returns true if found. */
+    bool get_snapshot(int snap_id, Snapshot &snap);
+
     int snap_list(int context_id, std::vector<Snapshot> &snaps);
     int snap_save(int context_id, const std::string &comment, const std::vector<SnapSaveRecord> &data);
     int snap_load(int snap_id, std::vector<SnapLoadRecord> &data);

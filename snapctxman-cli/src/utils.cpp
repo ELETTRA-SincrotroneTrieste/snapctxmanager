@@ -14,21 +14,35 @@
 #include <termios.h>
 #include <iostream>
 #include <fstream>
+#include <cstdlib>
 
 
 void Utils::usage(const char *appnam) {
-    std::ifstream usagef;
-    std::string line, path = DATADIR + std::string("/usage.txt");
-    usagef.open(path);
-    if(usagef.is_open()) {
-        while (std::getline (usagef,line) )
-            {
-              std::cout << line << '\n';
-            }
-        usagef.close();
+    (void) appnam;
+    std::string line;
+    std::string path = DATADIR + std::string("/usage.txt");
+    std::ifstream usagef(path);
+
+    if(!usagef.is_open()) {
+        const char *install_root = std::getenv("CUMBIA_INSTALL_ROOT");
+        if(install_root != nullptr && install_root[0] != '\0') {
+            std::string root_path(install_root);
+            if(!root_path.empty() && root_path.back() == '/')
+                root_path.pop_back();
+            path = root_path + "/share/snapctxmanager-cli/usage.txt";
+            usagef.clear();
+            usagef.open(path);
+        }
     }
-    else
-        printf("faile to load %s in read mode\n", path.c_str());
+
+    if(usagef.is_open()) {
+        while(std::getline(usagef, line)) {
+            std::cout << line << '\n';
+        }
+        usagef.close();
+    } else {
+        printf("failed to load %s in read mode\n", path.c_str());
+    }
 }
 
 std::string Utils::conf_dir() const {

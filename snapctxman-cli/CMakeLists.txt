@@ -9,8 +9,11 @@ set(CONF_FILE "snapctxman-cli.conf"
     CACHE STRING "Configuration file name")
 set(CONF_DIR "\$HOME/.config/snapctxman-cli"
     CACHE STRING "Directory containing the configuration file")
-set(DATADIR "${CMAKE_INSTALL_PREFIX}/share"
+set(DATADIR "${CMAKE_INSTALL_PREFIX}/share/snapctxmanager-cli"
     CACHE STRING "Data directory for installed files (e.g. usage.txt)")
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(TANGO REQUIRED tango)
 
 find_package(snapctxmanager REQUIRED
     HINTS /usr/local/cumbia-libs/lib/cmake/snapctxmanager)
@@ -26,7 +29,9 @@ target_compile_definitions(snapctx-man PRIVATE
     DATADIR="${DATADIR}"
 )
 
-target_link_libraries(snapctx-man PRIVATE snapctxmanager::snapctxmanager)
+target_include_directories(snapctx-man PRIVATE ${TANGO_INCLUDE_DIRS})
+target_link_libraries(snapctx-man PRIVATE snapctxmanager::snapctxmanager ${TANGO_LIBRARIES})
+target_link_directories(snapctx-man PRIVATE ${TANGO_LIBRARY_DIRS})
 
 install(TARGETS snapctx-man RUNTIME DESTINATION bin)
-install(FILES usage.txt DESTINATION share)
+install(FILES usage.txt DESTINATION share/snapctxmanager-cli)

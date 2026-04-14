@@ -246,6 +246,14 @@ std::vector<Context> SnapCtxManager::ctxlist() {
     return ctxs;
 }
 
+bool SnapCtxManager::get_snapshot(int snap_id, Snapshot &snap) {
+    d->msg.clear();
+    if(!d->dbschema) return false;
+    bool ok = d->dbschema->get_snapshot(d->connection, snap_id, snap);
+    d->msg = d->dbschema->error();
+    return ok;
+}
+
 int SnapCtxManager::snap_list(int context_id, std::vector<Snapshot> &snaps) {
     d->msg.clear();
     if(!d->dbschema) return 0;

@@ -205,6 +205,9 @@ public:
 
     // --- snapshot operations ---
 
+    /** Fetch a single snapshot row by snap id. Returns true if found. */
+    bool get_snapshot(Connection *conn, int snap_id, Snapshot &snap);
+
     /** List snapshots for the given context id, ordered by time DESC. */
     int snap_list(Connection *conn, int context_id, std::vector<Snapshot> &snaps);
 
