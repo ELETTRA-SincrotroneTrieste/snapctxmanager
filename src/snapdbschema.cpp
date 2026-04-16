@@ -707,8 +707,9 @@ int SnapDbSchema::snap_list(Connection *conn, int context_id, std::vector<Snapsh
 int SnapDbSchema::snap_save(Connection *conn, int context_id, const std::string &comment,
                              const std::vector<SnapSaveRecord> &data) {
     d->err.clear();
-    char q[4096];
+    char q[65535];
     // 1. Create snapshot row
+    printf("executing '%s'\n", q);
     snprintf(q, sizeof(q),
              "INSERT INTO snapshot (id_context,time,snap_comment) VALUES (%d,NOW(),'%s')",
              context_id, comment.c_str());
@@ -728,7 +729,7 @@ int SnapDbSchema::snap_save(Connection *conn, int context_id, const std::string 
 
     for(const SnapSaveRecord &r : data) {
         if(r.value == "NULL" || r.value.empty()) continue; // skip error records
-        char row_buf[1024];
+        char row_buf[8192];
         switch(r.snap_type) {
         case stScNum1:
             snprintf(row_buf, sizeof(row_buf), "(%d,%d,%s),", snap_id, r.id_att, r.value.c_str());
@@ -759,7 +760,9 @@ int SnapDbSchema::snap_save(Connection *conn, int context_id, const std::string 
     auto do_insert = [&](const std::string &table, std::string &vals) {
         if(vals.empty()) return;
         if(!vals.empty() && vals.back() == ',') vals.pop_back();
-        snprintf(q, sizeof(q), "INSERT INTO %s VALUES%s", table.c_str(), vals.c_str());
+        snprintf(q, sizeof(q), "INSERT INTO %s VALUES %s", table.c_str(), vals.c_str());
+
+        printf("executing '%s'\n", q);
         Result *r = conn->query(q);
         if(!r || strlen(conn->getError()) > 0)
             d->err += std::string(conn->getError()) + " ";
@@ -933,6 +936,46 @@ int SnapDbSchema::snap_query_by_atts(Connection *conn, const std::vector<std::st
         delete res;
     }
     return (int)results.size();
+}
+
+bool SnapDbSchema::get_context_atts(Connection *conn, int ctx_id, std::vector<Ast> &atts) {
+    d->err.clear();
+    atts.clear();
+    char q[2048];
+    memset(q, 0, sizeof(q));
+    enum Fields { ID = 0, FN, DT, DF, W, X, Y, F, ARCH, SUB, LVG, MAXFIELDS };
+    snprintf(q, sizeof(q),
+             "SELECT ast.ID, ast.full_name, ast.data_type, ast.data_format, ast.writable,"
+             " ast.max_dim_x, ast.max_dim_y, ast.facility,"
+             " ast.archivable, ast.substitute, ast.levelg"
+             " FROM list JOIN ast ON ast.ID=list.id_att"
+             " WHERE list.id_context=%d ORDER BY ast.full_name ASC",
+             ctx_id);
+    Result *res = conn->query(q);
+    if(!res) {
+        d->err = conn->getError();
+        return false;
+    }
+    atts.reserve(res->getRowCount());
+    while(res->next() > 0) {
+        Row *row = res->getCurrentRow();
+        if(!row || row->getFieldCount() < MAXFIELDS)
+            continue;
+        Ast a(row->getField(FN),
+              atoi(row->getField(X)), atoi(row->getField(Y)),
+              atoi(row->getField(DT)), atoi(row->getField(DF)), atoi(row->getField(W)));
+        a.id = atoi(row->getField(ID));
+        const char *f;
+        f = row->getField(F);    a.facility  = f ? f : "";
+        f = row->getField(ARCH); a.archivable = (f && *f) ? (char)atoi(f) : 0;
+        f = row->getField(SUB);  a.substitute = (f && *f) ? atoi(f) : 0;
+        f = row->getField(LVG);  a.levelg     = (f && *f) ? (char)atoi(f) : 0;
+        atts.push_back(std::move(a));
+    }
+    delete res;
+    if(atts.empty())
+        d->err = "no attributes found for context id=" + std::to_string(ctx_id);
+    return d->err.empty();
 }
 
 std::string SnapDbSchema::error() const {

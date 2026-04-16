@@ -1,0 +1,31 @@
+# Makefile
+
+# Get the current working directory
+CURRENT_DIR := $(shell pwd)
+
+# Set default values for build_dir and install_prefix
+BUILD_DIR := $(CURRENT_DIR)/build
+TMP_INSTALL_DIR=$(CURRENT_DIR)/tmp-install-dir
+PREFIX ?= /runtime
+export MAKE := $(MAKE)
+# The default target when you run 'make'
+all:
+	@echo "[ Makefile ] build_dir=$(BUILD_DIR) install_prefix=$(PREFIX) jobs $(JOBS)"
+	mkdir -p $(BUILD_DIR); \
+        cd $(BUILD_DIR) && cmake .. -DCMAKE_INSTALL_PREFIX=$(TMP_INSTALL_DIR)    -DCMAKE_PREFIX_PATH=$(PREFIX)  -DCMAKE_MODULE_PATH=$(PREFIX)/lib/cmake && $(MAKE) && $(MAKE) install
+
+# The target when you run 'make install'
+install:
+	@echo "[ Makefile ] installing from $(TMP_INSTALL_DIR) to $(PREFIX)"
+	@mkdir -p $(PREFIX)
+	@cp -rv $(TMP_INSTALL_DIR)/* $(PREFIX) 
+
+# Set the build_dir and install_prefix from the command line if provided
+# Example: make build_dir=/custom/build install_prefix=/custom/install install
+build:
+	@echo "[ Makefile ] build_dir=$(BUILD_DIR) and install_prefix=$(PREFIX)"
+	mkdir -p $(BUILD_DIR); \
+	cd $(BUILD_DIR) && cmake .. -DCMAKE_INSTALL_PREFIX=$(TMP_INSTALL_DIR) && $(MAKE) && $(MAKE) install
+
+
+

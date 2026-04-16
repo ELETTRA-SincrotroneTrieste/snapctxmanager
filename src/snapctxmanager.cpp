@@ -10,6 +10,7 @@
 #include <dbmacros.h>
 #include <dbsettings.h>
 #include <string.h>
+#include <cstdlib>  // getenv
 
 
 SnapCtxManager::~SnapCtxManager()
@@ -303,6 +304,14 @@ bool SnapCtxManager::query(const char *query, Result *&result, double *elapsed) 
     return success;
 }
 
+bool SnapCtxManager::get_context_atts(int ctx_id, std::vector<Ast> &atts) {
+    d->msg.clear();
+    if(!d->dbschema) return false;
+    bool ok = d->dbschema->get_context_atts(d->connection, ctx_id, atts);
+    d->msg = d->dbschema->error();
+    return ok;
+}
+
 bool SnapCtxManager::get_context_sorted(const std::string &id_or_nam, Context &ctx, std::vector<Ast> &v) {
     d->msg.clear();
     if(!d->dbschema) return false;
@@ -340,7 +349,36 @@ void SnapCtxManager::setDbSchemaListener(SnapDbSchemaListener *l) {
 }
 
 bool SnapCtxManager::isConnected() const {
-    return d->connection != NULL;
+    return d->connection != NULL && d->connection->isConnected();
+}
+
+// static
+std::string SnapCtxManager::defaultConfigFilePath() {
+    const char *home = getenv("HOME");
+    if(!home) return std::string();
+    return std::string(home) + "/.config/snapctxman-cli/snapctxman-cli.conf";
+}
+
+bool SnapCtxManager::connectFromConfig(const std::string &path) {
+    const std::string conffile = path.empty() ? defaultConfigFilePath() : path;
+    if(conffile.empty()) {
+        d->msg = "SnapCtxManager::connectFromConfig: HOME not set";
+        return false;
+    }
+    DbSettings *qc = new DbSettings();
+    qc->loadFromFile(conffile.c_str());
+    if(qc->hasError()) {
+        d->msg = std::string("SnapCtxManager::connectFromConfig: ") + qc->getError();
+        delete qc;
+        return false;
+    }
+    bool ok = connect(SNAPDBMYSQL,
+                      qc->get("dbhost").c_str(),
+                      qc->get("dbname").c_str(),
+                      qc->get("dbuser").c_str(),
+                      qc->get("dbpass").c_str());
+    delete qc;
+    return ok;
 }
 
 /** \brief Implements ResultListener::onProgressUpdate interface

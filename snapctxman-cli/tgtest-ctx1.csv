@@ -1,0 +1,10 @@
+test/device/1/double_scalar
+test/device/2/double_scalar
+test/device/1/wave
+test/device/2/wave
+test/device/1/short_scalar
+test/device/2/long_scalar
+test/device/1/short_spectrum
+test/device/2/long_spectrum
+test/device/1/float_scalar
+test/device/2/ushort_scalar

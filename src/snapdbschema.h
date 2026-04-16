@@ -182,6 +182,11 @@ public:
     int rename(Connection *conn, const std::vector<std::string>& olda, const std::vector<Ast> &v);
     bool get_context(Connection *conn, const std::string& id_or_nam, Context &ctx, std::vector<Ast>& v);
 
+    /** \brief Fetch all attributes for a context by numeric id, including archivable, substitute and levelg.
+     *  Unlike get_context(), this takes the numeric id directly and populates all Ast fields from the ast table.
+     *  Returns true on success. */
+    bool get_context_atts(Connection *conn, int ctx_id, std::vector<Ast> &atts);
+
     /** \brief Like get_context() but orders attributes by section_order position.
      *  Falls back to full_name ordering if section_order table does not exist. */
     bool get_context_sorted(Connection *conn, const std::string& id_or_nam, Context &ctx, std::vector<Ast>& v);

@@ -41,6 +41,15 @@ public:
     std::vector<std::string> ctx_load(const char *filenam) const;
 
     bool connect();
+    /** \brief Connect using parameters from the snapctxman-cli configuration file.
+     *  @param path Path to the conf file. If empty, uses ~/.config/snapctxman-cli/snapctxman-cli.conf
+     *  @return true on success
+     */
+    bool connectFromConfig(const std::string &path = "");
+
+    /** \brief Returns the default snapctxman-cli configuration file path ($HOME/.config/snapctxman-cli/snapctxman-cli.conf). */
+    static std::string defaultConfigFilePath();
+
     void disconnect();
     bool isConnected() const;
 
@@ -61,6 +70,10 @@ public:
     int add_to_ctx(const std::string& ctxnam, const std::vector<std::string> & srcs);
     int remove_ctx(const std::string& ctxnam);
     bool get_context(const std::string &id_or_nam, Context &ctx, std::vector<Ast>& v);
+
+    /** \brief Fetch all attributes for a context by numeric id, including archivable, substitute and levelg.
+     *  Returns true on success. */
+    bool get_context_atts(int ctx_id, std::vector<Ast> &atts);
 
     /** \brief get_context variant that orders attributes by section_order position (Elettra-specific). */
     bool get_context_sorted(const std::string &id_or_nam, Context &ctx, std::vector<Ast>& v);
